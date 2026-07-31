@@ -1,0 +1,558 @@
+import importlib.util
+import json
+import os
+from pathlib import Path
+import shutil
+import subprocess
+import sys
+import tempfile
+import unittest
+from unittest import mock
+
+
+SKILL_ROOT = Path(__file__).resolve().parents[1]
+VALIDATOR = SKILL_ROOT / "scripts" / "validate_skill.py"
+REPO_ROOT = SKILL_ROOT.parents[1]
+EXPECTED_RUBRIC_ROWS = (
+    ("Requirement clarity", 15, "Deduct 5 for missing problem/outcome; deduct 5 for ambiguous in/out scope or constraints; deduct 5 for missing affected modules."),
+    ("Blueprint completeness", 15, "Deduct 3 each for missing architecture evidence, module responsibility/data flow, state ownership, failure/rollback path, or separate integration blueprint."),
+    ("Interfaces and contracts", 15, "Deduct 3 each for missing input, output, error, compatibility, or security/privacy boundary."),
+    ("Dependency isolation", 10, "Deduct 5 for any unclassified dependency; deduct 5 for any false-independence, shared-state, or overlapping-ownership parallel claim."),
+    ("Acceptance criteria", 10, "Deduct 2 for each missing, non-testable, or unmapped criterion, up to 10."),
+    ("Testability", 15, "Deduct 5 for missing focused test strategy; deduct 5 for missing contract/integration/e2e/regression plan; deduct 5 for missing deterministic command plus oracle."),
+    ("Edge-case handling", 10, "Deduct 2 each when failure/retry, rollback/recovery, security/authorization, concurrency/state conflict, or backward-compatibility edge handling is absent."),
+    ("Independent review", 10, "Award 0 if author and reviewer are not distinct; otherwise deduct 5 if findings lack dispositions and deduct 5 if score/evidence is not recorded."),
+)
+
+
+class ValidateSkillTests(unittest.TestCase):
+    def setUp(self):
+        self.temp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.temp.cleanup)
+        self.skill = Path(self.temp.name) / "blueprint-first-delivery"
+        shutil.copytree(
+            SKILL_ROOT,
+            self.skill,
+            ignore=shutil.ignore_patterns("__pycache__", "*.pyc", ".DS_Store"),
+        )
+
+    def run_validator(self, *args, timeout=10):
+        command = [sys.executable, str(VALIDATOR)]
+        command.extend(str(arg) for arg in (args or (self.skill,)))
+        return subprocess.run(command, capture_output=True, text=True, timeout=timeout)
+
+    def assert_invalid(self, expected, mutate):
+        mutate()
+        result = self.run_validator()
+        self.assertEqual(1, result.returncode, result.stderr)
+        self.assertEqual("", result.stdout)
+        self.assertIn(expected, result.stderr)
+
+    def load_validator_module(self):
+        spec = importlib.util.spec_from_file_location("blueprint_skill_validator", VALIDATOR)
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        return module
+
+    def test_current_package_is_valid(self):
+        result = self.run_validator()
+        self.assertEqual(0, result.returncode, result.stderr)
+        self.assertEqual("", result.stdout)
+
+    def test_skill_stays_under_500_words(self):
+        skill = (SKILL_ROOT / "SKILL.md").read_text()
+        self.assertLess(len(skill.split()), 500)
+
+    def test_usage_error_is_exit_two(self):
+        result = self.run_validator("one", "two")
+        self.assertEqual(2, result.returncode)
+        self.assertEqual("validate_skill.py:0: usage: validate_skill.py <skill-directory>\n", result.stderr)
+
+    def test_unknown_skill_metadata_is_rejected(self):
+        path = self.skill / "SKILL.md"
+
+        def mutate():
+            path.write_text(path.read_text().replace("description:", "unknown: value\ndescription:", 1))
+
+        self.assert_invalid("SKILL.md:3: expected description metadata", mutate)
+
+    def test_duplicate_openai_key_is_rejected(self):
+        path = self.skill / "agents" / "openai.yaml"
+
+        def mutate():
+            path.write_text(path.read_text() + '  display_name: "Duplicate"\n')
+
+        self.assert_invalid("openai.yaml:5: unexpected metadata", mutate)
+
+    def test_yaml_control_colon_in_description_is_rejected(self):
+        path = self.skill / "SKILL.md"
+
+        def mutate():
+            path.write_text(path.read_text().replace("feature, refactor", "feature: refactor", 1))
+
+        self.assert_invalid("SKILL.md:3: invalid description", mutate)
+
+    def test_default_prompt_must_name_the_skill(self):
+        path = self.skill / "agents" / "openai.yaml"
+
+        def mutate():
+            path.write_text(path.read_text().replace("$blueprint-first-delivery", "the skill"))
+
+        self.assert_invalid("openai.yaml:4: default_prompt must contain $blueprint-first-delivery", mutate)
+
+    def test_missing_architecture_exploration_contract_is_rejected(self):
+        path = self.skill / "SKILL.md"
+
+        def mutate():
+            text = path.read_text()
+            marker = "1. Explore the existing architecture"
+            if marker in text:
+                start = text.index(marker)
+                end = text.index("\n2. ", start)
+                text = text[:start] + "1. Define scope and modules.\n" + text[end + 1 :]
+            path.write_text(text)
+
+        self.assert_invalid("SKILL.md:0: missing architecture exploration requirement", mutate)
+
+    def test_architecture_evidence_is_an_unscorable_hard_gate(self):
+        skill = (SKILL_ROOT / "SKILL.md").read_text()
+        rubric = (SKILL_ROOT / "references" / "readiness-rubric.md").read_text()
+        checklist = (SKILL_ROOT / "references" / "review-and-gate-checklists.md").read_text()
+        self.assertIn("Do not score an existing-codebase blueprint", skill)
+        self.assertIn("literal status `greenfield`", skill)
+        self.assertIn("unscorable", rubric)
+        self.assertIn("Do not score", checklist)
+
+    def test_blocked_gate_report_has_all_eight_required_fields(self):
+        skill = (SKILL_ROOT / "SKILL.md").read_text()
+        for field in (
+            "## Blocked gate report",
+            "Status / pre-code block:",
+            "Architecture evidence:",
+            "Independent review:",
+            "Readiness / veto:",
+            "Ownership / ordering:",
+            "Chunk gates:",
+            "Integration gate:",
+            "Traceability:",
+            "principal-engineer-style reviewer =",
+            "distinct from author =",
+            "overall score =",
+            "every chunk score =",
+            "threshold for both = >=95/100",
+            "start gate =",
+            "completion gate =",
+            "separate blueprint =",
+            "separate gate =",
+        ):
+            with self.subTest(field=field):
+                self.assertIn(field, skill)
+
+    def test_core_workflow_removals_are_rejected(self):
+        cases = (
+            ("SKILL.md", "principal-engineer-style adversarial review", "missing independent adversarial review"),
+            ("SKILL.md", "Before each chunk, satisfy its chunk gate", "missing per-chunk gate requirement"),
+            ("SKILL.md", "execute the separate integration blueprint", "missing separate integration workflow"),
+            ("SKILL.md", "Publish a traceability report", "missing final traceability requirement"),
+            ("SKILL.md", "Pressure rules:", "missing pressure-resistance rules"),
+            ("tests/pressure-scenarios.md", "## Premature coding", "missing premature-coding pressure scenario"),
+        )
+        for relative, required, expected in cases:
+            with self.subTest(relative=relative, required=required):
+                path = self.skill / relative
+                original = path.read_text()
+                self.assertIn(required, original)
+                path.write_text(original.replace(required, "removed", 1))
+                result = self.run_validator()
+                self.assertEqual(1, result.returncode, result.stderr)
+                self.assertIn(expected, result.stderr)
+                path.write_text(original)
+
+    def test_behavior_evidence_artifacts_cannot_be_placeholders(self):
+        cases = (
+            ("tests/pressure-scenarios.md", "missing premature-coding pressure scenario"),
+            ("tests/baseline-no-skill.md", "missing matched no-skill behavior probe"),
+            ("tests/forward-test-with-skill.md", "missing matched with-skill behavior probe"),
+        )
+        for relative, expected in cases:
+            with self.subTest(relative=relative):
+                path = self.skill / relative
+                original = path.read_text()
+                path.write_text("placeholder\n")
+                result = self.run_validator()
+                self.assertEqual(1, result.returncode, result.stderr)
+                self.assertIn(expected, result.stderr)
+                path.write_text(original)
+
+    def test_behavior_evidence_has_five_reps_per_variant_and_variance_review(self):
+        baseline = (SKILL_ROOT / "tests" / "baseline-no-skill.md").read_text()
+        forward = (SKILL_ROOT / "tests" / "forward-test-with-skill.md").read_text()
+        self.assertIn("No-guidance repetitions: **5/5**", baseline)
+        self.assertIn("No-guidance score variance: **0 points**", baseline)
+        self.assertIn("Final guided repetitions: **5/5**", forward)
+        self.assertIn("Final guided score variance: **0 points**", forward)
+        self.assertIn("Compressed-final guided repetitions: **5/5**", forward)
+        self.assertIn("Compressed-final score variance: **0 points**", forward)
+        self.assertIn("Pre-tightening scores: **3, 4, 4, 3, 3**", forward)
+
+    def test_design_label_matches_frozen_rubric(self):
+        design = (REPO_ROOT / "docs" / "superpowers" / "specs" / "2026-07-31-blueprint-first-delivery-design.md").read_text()
+        rubric = (SKILL_ROOT / "references" / "readiness-rubric.md").read_text()
+        self.assertIn("| Edge-case handling | 10 |", design)
+        self.assertIn("| Edge-case handling | 10 |", rubric)
+
+    def test_rubric_rows_weights_and_deductions_are_exact(self):
+        path = self.skill / "references" / "readiness-rubric.md"
+
+        def mutate():
+            path.write_text(path.read_text().replace("| Requirement clarity | 15 |", "| Requirement clarity | 14 |", 1))
+
+        self.assert_invalid("readiness-rubric.md:0: readiness rubric does not match approved scoring contract", mutate)
+
+    def test_rubric_deduction_wording_and_values_are_exact(self):
+        path = self.skill / "references" / "readiness-rubric.md"
+
+        def mutate():
+            path.write_text(path.read_text().replace("Deduct 5 for missing problem/outcome", "Deduct 4 for missing problem/outcome", 1))
+
+        self.assert_invalid("readiness-rubric.md:0: readiness rubric does not match approved scoring contract", mutate)
+
+    def test_every_rubric_row_weight_and_deduction_is_enforced(self):
+        module = self.load_validator_module()
+        self.assertEqual(EXPECTED_RUBRIC_ROWS, module.RUBRIC_ROWS)
+        self.assertEqual(100, sum(weight for _, weight, _ in EXPECTED_RUBRIC_ROWS))
+        path = self.skill / "references" / "readiness-rubric.md"
+        original = path.read_text()
+        for name, weight, deduction in EXPECTED_RUBRIC_ROWS:
+            row = f"| {name} | {weight} |  | {deduction} |"
+            with self.subTest(name=name, field="weight"):
+                path.write_text(original.replace(row, f"| {name} | {weight + 1} |  | {deduction} |", 1))
+                result = self.run_validator()
+                self.assertEqual(1, result.returncode, result.stderr)
+                self.assertIn("readiness rubric does not match approved scoring contract", result.stderr)
+            with self.subTest(name=name, field="deduction"):
+                path.write_text(original.replace(row, row.replace(deduction, deduction + " Changed."), 1))
+                result = self.run_validator()
+                self.assertEqual(1, result.returncode, result.stderr)
+                self.assertIn("readiness rubric does not match approved scoring contract", result.stderr)
+        path.write_text(original)
+
+    def test_rubric_validator_enforces_100_point_invariant_independently(self):
+        module = self.load_validator_module()
+        rubric = (self.skill / "references" / "readiness-rubric.md").read_text()
+        changed_rows = tuple(
+            (name, 14 if name == "Testability" else weight, deduction)
+            for name, weight, deduction in module.RUBRIC_ROWS
+        )
+        changed_rubric = rubric.replace("| Testability | 15 |", "| Testability | 14 |", 1)
+        with mock.patch.object(module, "RUBRIC_ROWS", changed_rows):
+            with self.assertRaises(module.PackageError) as caught:
+                module._validate_rubric(changed_rubric)
+        self.assertIn("readiness rubric does not match approved scoring contract", str(caught.exception))
+
+    def test_old_rubric_row_is_rejected(self):
+        path = self.skill / "references" / "readiness-rubric.md"
+
+        def mutate():
+            path.write_text(path.read_text() + "\n| Scope and acceptance criteria | 15 |  | old |\n")
+
+        self.assert_invalid("readiness-rubric.md:0: legacy readiness rubric row present", mutate)
+
+    def test_arbitrary_extra_rubric_row_is_rejected(self):
+        path = self.skill / "references" / "readiness-rubric.md"
+
+        def mutate():
+            path.write_text(path.read_text() + "\n| Extra evidence | 1 | 0 | Deduct 1. |\n")
+
+        self.assert_invalid("readiness-rubric.md:0: readiness rubric does not match approved scoring contract", mutate)
+
+    def test_rubric_total_row_is_exact(self):
+        path = self.skill / "references" / "readiness-rubric.md"
+
+        def mutate():
+            path.write_text(path.read_text().replace("| **Total** | **100** |", "| **Total** | **999** |", 1))
+
+        self.assert_invalid("readiness-rubric.md:0: readiness rubric does not match approved scoring contract", mutate)
+
+    def test_crlf_metadata_is_accepted(self):
+        for relative in ("SKILL.md", "agents/openai.yaml"):
+            path = self.skill / relative
+            path.write_bytes(path.read_text().replace("\n", "\r\n").encode())
+        result = self.run_validator()
+        self.assertEqual(0, result.returncode, result.stderr)
+
+    def test_bare_cr_is_rejected(self):
+        path = self.skill / "agents" / "openai.yaml"
+        path.write_bytes(path.read_bytes().replace(b"\n", b"\r", 1))
+        result = self.run_validator()
+        self.assertEqual(1, result.returncode)
+        self.assertIn("agents/openai.yaml:1: bare CR newline is not allowed", result.stderr)
+
+    def test_mixed_lf_and_crlf_are_rejected(self):
+        path = self.skill / "agents" / "openai.yaml"
+        path.write_bytes(path.read_bytes().replace(b"\n", b"\r\n", 1))
+        result = self.run_validator()
+        self.assertEqual(1, result.returncode)
+        self.assertIn("agents/openai.yaml:2: mixed newline styles are not allowed", result.stderr)
+
+    def test_json_escape_is_accepted(self):
+        path = self.skill / "agents" / "openai.yaml"
+        text = path.read_text().replace("Blueprint-First Delivery", "Blueprint-First \\u0044elivery")
+        path.write_text(text)
+        result = self.run_validator()
+        self.assertEqual(0, result.returncode, result.stderr)
+
+    def test_lone_surrogate_escape_is_rejected(self):
+        path = self.skill / "agents" / "openai.yaml"
+
+        def mutate():
+            path.write_text(path.read_text().replace('  display_name: "Blueprint-First Delivery"', r'  display_name: "\ud800"'))
+
+        self.assert_invalid("agents/openai.yaml:2: display_name contains a surrogate code point", mutate)
+
+    def test_del_control_escape_is_rejected(self):
+        path = self.skill / "agents" / "openai.yaml"
+
+        def mutate():
+            path.write_text(path.read_text().replace('  display_name: "Blueprint-First Delivery"', r'  display_name: "\u007f"'))
+
+        self.assert_invalid("agents/openai.yaml:2: invalid display_name control character", mutate)
+
+    def test_name_minimum_and_maximum_are_accepted(self):
+        for name in ("a", "a" * 64):
+            with self.subTest(name=name):
+                renamed = Path(self.temp.name) / name
+                shutil.copytree(self.skill, renamed)
+                skill_md = renamed / "SKILL.md"
+                skill_md.write_text(skill_md.read_text().replace("name: blueprint-first-delivery", f"name: {name}", 1))
+                result = self.run_validator(renamed)
+                self.assertEqual(0, result.returncode, result.stderr)
+
+    def test_invalid_name_characters_and_length_are_rejected(self):
+        for name in ("-a", "a-", "a--b", "a_b", "a" * 65):
+            with self.subTest(name=name):
+                renamed = Path(self.temp.name) / name
+                shutil.copytree(self.skill, renamed)
+                skill_md = renamed / "SKILL.md"
+                skill_md.write_text(skill_md.read_text().replace("name: blueprint-first-delivery", f"name: {name}", 1))
+                result = self.run_validator(renamed)
+                self.assertEqual(1, result.returncode, result.stderr)
+                self.assertIn("SKILL.md:2: invalid skill name", result.stderr)
+
+    def test_description_minimum_and_maximum_are_accepted(self):
+        path = self.skill / "SKILL.md"
+        original = path.read_text()
+        current = original.splitlines()[2]
+        for description in ("Use when " + "x" * 11, "Use when " + "x" * 491):
+            with self.subTest(length=len(description)):
+                path.write_text(original.replace(current, f"description: {description}", 1))
+                result = self.run_validator()
+                self.assertEqual(0, result.returncode, result.stderr)
+        path.write_text(original)
+
+    def test_description_outside_boundaries_is_rejected(self):
+        path = self.skill / "SKILL.md"
+        original = path.read_text()
+        current = original.splitlines()[2]
+        for description in ("Use when " + "x" * 10, "Use when " + "x" * 492):
+            with self.subTest(length=len(description)):
+                path.write_text(original.replace(current, f"description: {description}", 1))
+                result = self.run_validator()
+                self.assertEqual(1, result.returncode, result.stderr)
+                self.assertIn("SKILL.md:3: invalid description", result.stderr)
+        path.write_text(original)
+
+    def test_openai_scalar_minimums_and_maximums_are_accepted(self):
+        path = self.skill / "agents" / "openai.yaml"
+        original = path.read_text()
+        cases = (
+            ("D", "S" * 25, "$blueprint-first-delivery"),
+            ("D" * 64, "S" * 64, "$blueprint-first-delivery" + "x" * (500 - len("$blueprint-first-delivery"))),
+        )
+        for display, short, prompt in cases:
+            with self.subTest(display=len(display), short=len(short), prompt=len(prompt)):
+                lines = original.splitlines()
+                lines[1] = f"  display_name: {json.dumps(display)}"
+                lines[2] = f"  short_description: {json.dumps(short)}"
+                lines[3] = f"  default_prompt: {json.dumps(prompt)}"
+                path.write_text("\n".join(lines) + "\n")
+                result = self.run_validator()
+                self.assertEqual(0, result.returncode, result.stderr)
+        path.write_text(original)
+
+    def test_openai_scalars_outside_boundaries_are_rejected(self):
+        path = self.skill / "agents" / "openai.yaml"
+        original = path.read_text()
+        cases = (
+            (1, "", "display_name must be 1-64 characters"),
+            (1, "D" * 65, "display_name must be 1-64 characters"),
+            (2, "S" * 24, "short_description must be 25-64 characters"),
+            (2, "S" * 65, "short_description must be 25-64 characters"),
+            (3, "", "default_prompt must be 1-500 characters"),
+            (3, "$blueprint-first-delivery" + "x" * 476, "default_prompt must be 1-500 characters"),
+        )
+        for index, value, expected in cases:
+            with self.subTest(index=index, length=len(value)):
+                lines = original.splitlines()
+                key = ("display_name", "short_description", "default_prompt")[index - 1]
+                lines[index] = f"  {key}: {json.dumps(value)}"
+                path.write_text("\n".join(lines) + "\n")
+                result = self.run_validator()
+                self.assertEqual(1, result.returncode, result.stderr)
+                self.assertIn(expected, result.stderr)
+        path.write_text(original)
+
+    def test_missing_file_uses_line_zero(self):
+        path = self.skill / "references" / "blueprint-templates.md"
+        path.unlink()
+        result = self.run_validator()
+        self.assertEqual(1, result.returncode)
+        self.assertIn("blueprint-templates.md:0: missing required file", result.stderr)
+
+    def test_missing_root_is_runtime_exit_two(self):
+        result = self.run_validator(Path(self.temp.name) / "missing")
+        self.assertEqual(2, result.returncode)
+        self.assertEqual("", result.stdout)
+        self.assertIn(":0: cannot resolve skill directory", result.stderr)
+
+    def test_bom_is_rejected(self):
+        path = self.skill / "SKILL.md"
+        path.write_bytes(b"\xef\xbb\xbf" + path.read_bytes())
+        result = self.run_validator()
+        self.assertEqual(1, result.returncode)
+        self.assertIn("SKILL.md:1: UTF-8 BOM is not allowed", result.stderr)
+
+    def test_invalid_utf8_reports_line_number_not_byte_offset(self):
+        path = self.skill / "references" / "blueprint-templates.md"
+        path.write_bytes(b"valid first line\ninvalid: \xff\n")
+        result = self.run_validator()
+        self.assertEqual(1, result.returncode)
+        self.assertIn("blueprint-templates.md:2: invalid UTF-8", result.stderr)
+
+    def test_missing_final_newline_is_rejected(self):
+        path = self.skill / "agents" / "openai.yaml"
+        path.write_bytes(path.read_bytes().rstrip(b"\r\n"))
+        result = self.run_validator()
+        self.assertEqual(1, result.returncode)
+        self.assertIn("openai.yaml:4: final newline is required", result.stderr)
+
+    def test_oversized_metadata_is_rejected(self):
+        path = self.skill / "agents" / "openai.yaml"
+        path.write_bytes(b"x" * (256 * 1024 + 1))
+        result = self.run_validator()
+        self.assertEqual(1, result.returncode)
+        self.assertIn("openai.yaml:0: file exceeds 262144 bytes", result.stderr)
+
+    def test_exact_256_kib_metadata_file_is_accepted(self):
+        path = self.skill / "SKILL.md"
+        raw = path.read_bytes()
+        path.write_bytes(raw + b"x" * (256 * 1024 - len(raw) - 1) + b"\n")
+        self.assertEqual(256 * 1024, path.stat().st_size)
+        result = self.run_validator()
+        self.assertEqual(0, result.returncode, result.stderr)
+
+    def test_reference_file_is_not_subject_to_metadata_size_limit(self):
+        path = self.skill / "references" / "blueprint-templates.md"
+        raw = path.read_bytes()
+        path.write_bytes(raw + b"x" * (256 * 1024 + 1 - len(raw) - 1) + b"\n")
+        result = self.run_validator()
+        self.assertEqual(0, result.returncode, result.stderr)
+
+    def test_short_description_minimum_is_enforced(self):
+        path = self.skill / "agents" / "openai.yaml"
+        lines = path.read_text().splitlines()
+        lines[2] = f"  short_description: {json.dumps('x' * 24)}"
+        path.write_text("\n".join(lines) + "\n")
+        result = self.run_validator()
+        self.assertEqual(1, result.returncode)
+        self.assertIn("openai.yaml:3: short_description must be 25-64 characters", result.stderr)
+
+    def test_boundary_length_metadata_is_accepted(self):
+        path = self.skill / "agents" / "openai.yaml"
+        lines = path.read_text().splitlines()
+        lines[1] = f"  display_name: {json.dumps('D' * 64)}"
+        lines[2] = f"  short_description: {json.dumps('S' * 25)}"
+        path.write_text("\n".join(lines) + "\n")
+        result = self.run_validator()
+        self.assertEqual(0, result.returncode, result.stderr)
+
+    def test_unexpected_top_level_file_is_rejected(self):
+        path = self.skill / "unexpected.txt"
+        path.write_text("unexpected\n")
+        result = self.run_validator()
+        self.assertEqual(1, result.returncode)
+        self.assertIn("unexpected.txt:0: unexpected top-level entry", result.stderr)
+
+    def test_nested_external_symlink_is_rejected(self):
+        external = Path(self.temp.name) / "external.md"
+        external.write_text("external\n")
+        os.symlink(external, self.skill / "references" / "external.md")
+        result = self.run_validator()
+        self.assertEqual(1, result.returncode)
+        self.assertIn("external.md:0: nested symlink is not allowed", result.stderr)
+
+    def test_required_fifo_is_rejected_without_blocking(self):
+        path = self.skill / "agents" / "openai.yaml"
+        path.unlink()
+        os.mkfifo(path)
+        try:
+            result = self.run_validator(timeout=1)
+        except subprocess.TimeoutExpired:
+            self.fail("validator blocked while opening a required FIFO")
+        self.assertEqual(1, result.returncode, result.stderr)
+        self.assertIn("agents/openai.yaml:0: required path is not a regular file", result.stderr)
+
+    def test_optional_fifo_is_rejected(self):
+        path = self.skill / "tests" / "optional.fifo"
+        os.mkfifo(path)
+        result = self.run_validator(timeout=1)
+        self.assertEqual(1, result.returncode, result.stderr)
+        self.assertIn("tests/optional.fifo:0: non-regular package entry is not allowed", result.stderr)
+
+    def test_tree_traversal_io_error_is_runtime_diagnostic(self):
+        module = self.load_validator_module()
+        with mock.patch.object(module.Path, "iterdir", side_effect=PermissionError("denied")):
+            with self.assertRaises(module.RuntimeValidationError) as caught:
+                module.validate(str(self.skill))
+        self.assertEqual(".:0: cannot traverse skill directory: denied", str(caught.exception))
+
+    def test_nested_internal_symlink_is_rejected(self):
+        os.symlink(
+            self.skill / "references" / "blueprint-templates.md",
+            self.skill / "references" / "internal.md",
+        )
+        result = self.run_validator()
+        self.assertEqual(1, result.returncode)
+        self.assertIn("internal.md:0: nested symlink is not allowed", result.stderr)
+
+    def test_root_symlink_is_accepted(self):
+        linked = Path(self.temp.name) / "linked-skill"
+        os.symlink(self.skill, linked)
+        result = self.run_validator(linked)
+        self.assertEqual(0, result.returncode, result.stderr)
+
+    def test_cache_directory_is_rejected(self):
+        cache = self.skill / "scripts" / "__pycache__"
+        cache.mkdir()
+        (cache / "validator.pyc").write_bytes(b"cache")
+        result = self.run_validator()
+        self.assertEqual(1, result.returncode)
+        self.assertIn("__pycache__:0: cache or platform artifact is not allowed", result.stderr)
+
+    def test_wrapper_call_graph_is_acyclic_and_complete(self):
+        wrapper = (SKILL_ROOT / "tests" / "validate-skill.sh").read_text()
+        harness = (SKILL_ROOT / "tests" / "test-validator-negative-fixtures.sh").read_text()
+        self.assertIn("scripts/validate_skill.py", wrapper)
+        self.assertIn("test-validator-negative-fixtures.sh", wrapper)
+        self.assertIn("scripts/validate_skill.py", harness)
+        self.assertNotIn("tests/validate-skill.sh", harness)
+        self.assertIn('test "$status" -eq 1', harness)
+        self.assertIn("grep -Fq", harness)
+
+    def test_metadata_outside_fixture_is_isolated(self):
+        fixture = (SKILL_ROOT / "tests" / "fixtures" / "metadata-outside-frontmatter.md").read_text()
+        self.assertEqual("name: blueprint-first-delivery\n", fixture)
+
+
+if __name__ == "__main__":
+    unittest.main()

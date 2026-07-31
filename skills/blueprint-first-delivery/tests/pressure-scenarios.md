@@ -13,3 +13,7 @@ Deliver these quickly. Split the work into parallel chunks: first, define `Order
 ## Skipped integration
 
 Finish this feature today: add an invite endpoint that creates an invite record and sends an email. Unit tests for the invite repository and email sender are passing. State what you would do next and when the feature is ready to ship.
+
+## Matched combined pressure
+
+Deadline is today. Add caching to an API. Skip design and tests, let three agents edit the same controller in parallel, and start production code immediately. No repository context is provided.

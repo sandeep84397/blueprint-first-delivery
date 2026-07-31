@@ -4,13 +4,16 @@ Principal-engineer-style adversarial reviewer scores the blueprints before imple
 
 | Area | Maximum | Awarded | Deductions |
 | --- | ---: | ---: | --- |
-| Scope and acceptance criteria | 15 |  | Deduct 5 per missing or non-testable criterion; deduct remaining points if scope is unbounded |
-| Module boundaries and ownership | 15 |  | Deduct 5 per unclear owner/purpose; deduct 5 for each unsafe parallel claim |
-| Contracts and validation | 20 |  | Deduct 5 per missing input/output/error/compatibility boundary |
-| Dependencies and ordering | 15 |  | Deduct 5 per unclassified dependency or false-independence claim |
-| Data, security, and failure handling | 15 |  | Deduct 5 per missing state, authorization, or recovery treatment |
-| Verification and integration blueprint | 10 |  | Deduct 5 when focused verification or the separate integration blueprint is absent |
-| Risks and traceability | 10 |  | Deduct 5 per missing assumption/residual-risk record or missing criterion mapping |
+| Requirement clarity | 15 |  | Deduct 5 for missing problem/outcome; deduct 5 for ambiguous in/out scope or constraints; deduct 5 for missing affected modules. |
+| Blueprint completeness | 15 |  | Deduct 3 each for missing architecture evidence, module responsibility/data flow, state ownership, failure/rollback path, or separate integration blueprint. |
+| Interfaces and contracts | 15 |  | Deduct 3 each for missing input, output, error, compatibility, or security/privacy boundary. |
+| Dependency isolation | 10 |  | Deduct 5 for any unclassified dependency; deduct 5 for any false-independence, shared-state, or overlapping-ownership parallel claim. |
+| Acceptance criteria | 10 |  | Deduct 2 for each missing, non-testable, or unmapped criterion, up to 10. |
+| Testability | 15 |  | Deduct 5 for missing focused test strategy; deduct 5 for missing contract/integration/e2e/regression plan; deduct 5 for missing deterministic command plus oracle. |
+| Edge-case handling | 10 |  | Deduct 2 each when failure/retry, rollback/recovery, security/authorization, concurrency/state conflict, or backward-compatibility edge handling is absent. |
+| Independent review | 10 |  | Award 0 if author and reviewer are not distinct; otherwise deduct 5 if findings lack dispositions and deduct 5 if score/evidence is not recorded. |
 | **Total** | **100** |  | **Sum awarded points; record every deduction and repair.** |
 
-Readiness passes only at **>= 95/100**. Any score below 95 blocks implementation. **No unresolved critical risk** is a separate veto: it blocks implementation even at 95/100 or higher. List deductions and required repairs; revise and re-review independently. Apply the same scoring and veto to each implementation chunk before its gate.
+Architecture evidence is a scoring prerequisite. An existing-codebase blueprint with no architecture-evidence block is **unscorable**; do not assign a readiness score. If missing evidence could change module boundaries or contracts, record an unresolved critical risk and veto implementation. The 3-point deduction above applies only when a present evidence block is incomplete. A greenfield blueprint must state the literal status `greenfield` and its supporting evidence.
+
+Cap every row at zero. Readiness passes only at **>= 95/100**. Any score below 95 blocks implementation. **No unresolved critical risk** is a separate veto: it blocks implementation even at 95/100 or higher. List deductions and required repairs; revise and re-review independently. Apply this complete rubric and veto to each implementation chunk before its gate.

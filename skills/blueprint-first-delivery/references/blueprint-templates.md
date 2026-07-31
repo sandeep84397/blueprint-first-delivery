@@ -5,6 +5,14 @@ Write every blueprint in plain English. Create one blueprint per module or bound
 ```md
 ## <module/change area>
 
+### Current architecture evidence
+- Existing codebase evidence, or literal `greenfield` status and evidence:
+- Inspected locations / symbols:
+- Relevant conventions and boundaries:
+- Observed dependencies, contracts, and state owners:
+- Current test / build entrypoints:
+- Unresolved questions or assumptions:
+
 ### Purpose and scope
 - Problem / user outcome:
 - In scope:

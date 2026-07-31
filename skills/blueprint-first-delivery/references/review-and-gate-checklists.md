@@ -3,6 +3,8 @@
 ## Principal-engineer-style adversarial blueprint review
 
 - Reviewer is not the blueprint author.
+- Architecture evidence is recorded: inspected locations, conventions, dependencies/contracts, state owners, test/build entrypoints, and unresolved questions or greenfield evidence.
+- Do not score an existing-codebase blueprint without a complete architecture-evidence block. Boundary- or contract-affecting absence is an unresolved critical-risk veto.
 - Challenge contracts, hidden dependencies, ownership, failure paths, security, and claimed evidence.
 - All modules have scope, contracts, dependencies, verification, and risks.
 - A separate integration blueprint covers every cross-module flow.
