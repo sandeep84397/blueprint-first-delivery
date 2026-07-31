@@ -1,6 +1,6 @@
 # Blueprint templates
 
-Create one blueprint per module or bounded change area.
+Write every blueprint in plain English. Create one blueprint per module or bounded change area, plus the separate integration blueprint below.
 
 ```md
 ## <module/change area>
@@ -21,7 +21,8 @@ Create one blueprint per module or bounded change area.
 ### Design
 - Dependencies owned or consumed:
 - Ordered prerequisites:
-- Independent work possible:
+- Parallel work possible (only if frozen contracts and non-overlapping file/state ownership):
+- File/state ownership per chunk:
 - Implementation chunks and owners:
 
 ### Verification
@@ -29,6 +30,26 @@ Create one blueprint per module or bounded change area.
 - Contract/e2e evidence:
 - Integration evidence:
 - Risks and assumptions:
+```
+
+# Integration blueprint template
+
+```md
+## Integration: <cross-module flow>
+
+### Plain-English outcome
+- User/business outcome:
+- Modules and external systems involved:
+
+### Frozen boundaries
+- Contracts exercised:
+- State transitions and file/state owners:
+- Failure, retry, and rollback paths:
+
+### Integration evidence
+- End-to-end flow and expected result:
+- Authorization, observability, compatibility checks:
+- Acceptance criteria and traceability rows:
 ```
 
 # Traceability report template

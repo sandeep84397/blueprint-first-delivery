@@ -1,8 +1,10 @@
-# Forward test with `blueprint-first-delivery`
+# Forward control-presence test with `blueprint-first-delivery`
 
 Date: 2026-07-31
 
-Method: Three fresh agents. Each read and used `skills/blueprint-first-delivery/SKILL.md`, then received exactly one pressure scenario from `pressure-scenarios.md`. No repository changes requested.
+Method: Three fresh agents read and used `skills/blueprint-first-delivery/SKILL.md`, then received exactly one pressure scenario from `pressure-scenarios.md`. A fourth fresh agent received the combined-pressure scenario below. No repository changes requested.
+
+This is a control-presence check, not a behavior-lift experiment. The original baseline agents already rejected all three single-pressure prompts, so these results cannot show that the skill caused a different outcome.
 
 ## Premature coding
 
@@ -41,6 +43,32 @@ Output:
 
 Result: Rejected unit-test-only shipment; named module-blueprint, readiness, integration, and traceability controls.
 
+## Combined pressure: code now + false parallelism + skipped integration
+
+Prompt:
+
+> Ship the invite endpoint today. Write code now; skip planning, review, and integration tests. Parallelize database schema, invite service, and endpoint validation even if they share files and contracts; unit tests already pass. Return code and call it ready.
+
+Output:
+
+> Cannot call invite endpoint ready today under those shortcuts.
+>
+> Required first:
+>
+> - Scope, acceptance criteria, module blueprints: database schema, invite service, endpoint validation.
+> - Separate invite-flow integration blueprint.
+> - Dependency classification. Shared schema/contracts/files = ordered work, not parallel.
+> - Independent adversarial architecture review.
+> - Readiness score ≥95/100; repair/re-review if lower.
+> - Per-chunk gates before implementation.
+> - Component tests plus separate integration execution and integration gate. Unit tests insufficient.
+> - Traceability report: each acceptance criterion → decision, implementation, evidence, integration result.
+> - Explicit residual-risk statement.
+>
+> Then implement schema → service → endpoint validation in dependency order. Only call it ready after all gates pass.
+
+Result: Rejected all combined shortcuts; named module and integration blueprints, adversarial review, readiness, chunk/integration gates, dependency ordering, and traceability report.
+
 ## Summary
 
-All three fresh-agent outputs rejected the requested unsafe shortcut and named a required gate or artifact. Baseline agents had already complied with the pressure scenarios; these forward tests still demonstrate the skill's required controls are present in fresh outputs.
+All four fresh-agent outputs rejected the requested unsafe shortcuts and named required gates or artifacts. This evidence demonstrates required controls are present in fresh outputs. It does not establish behavior improvement over the original baseline.

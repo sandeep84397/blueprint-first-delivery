@@ -1,10 +1,12 @@
 # Review and gate checklists
 
-## Independent blueprint review
+## Principal-engineer-style adversarial blueprint review
 
 - Reviewer is not the blueprint author.
+- Challenge contracts, hidden dependencies, ownership, failure paths, security, and claimed evidence.
 - All modules have scope, contracts, dependencies, verification, and risks.
-- Dependency classification is correct: independent, ordered, or integration-only.
+- A separate integration blueprint covers every cross-module flow.
+- Dependency classification is correct: independent, ordered, or integration-only. Parallel work has frozen contracts and non-overlapping file/state ownership.
 - Readiness score is recorded. Below 95/100: return for repair.
 
 ## Chunk gate
@@ -12,6 +14,7 @@
 Before starting a chunk:
 
 - Prerequisite ordered chunks and shared contracts are complete or explicitly stable.
+- Parallel chunks have frozen contracts and non-overlapping file/state ownership.
 - Owner, acceptance criteria, and verification evidence are assigned.
 - Boundary, error, security, compatibility, and rollback impacts are understood.
 
@@ -23,7 +26,7 @@ Before marking a chunk complete:
 
 ## Integration gate
 
-Run only after relevant chunks are complete. This is separate from unit/component gates.
+Run the separate integration blueprint only after relevant chunks are complete. This is separate from unit/component gates.
 
 - Exercise cross-module flow, real boundary contracts, persistence/external effects, and failure paths.
 - Verify authorization, observability, rollback/retry behavior, and backward compatibility where applicable.
