@@ -1,0 +1,4 @@
+interface:
+  display_name: Blueprint-First Delivery
+  short_description: Blueprint, review, gate, then integrate feature delivery.
+  default_prompt: Use $blueprint-first-delivery to plan this change before implementation.
