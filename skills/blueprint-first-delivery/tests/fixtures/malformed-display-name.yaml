@@ -1,0 +1,4 @@
+interface:
+  display_name: "Blueprint" broken"
+  short_description: "Plan before production code"
+  default_prompt: "Create a delivery blueprint before implementation."
