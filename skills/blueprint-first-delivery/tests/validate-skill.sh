@@ -7,3 +7,6 @@ done
 grep -q '^name: blueprint-first-delivery$' "$root/SKILL.md"
 grep -q '95/100' "$root/SKILL.md"
 grep -q 'integration' "$root/SKILL.md"
+test -f README.md || { echo 'missing: README.md' >&2; exit 1; }
+grep -q 'blueprint-first-delivery' README.md
+grep -q 'skills/blueprint-first-delivery' README.md
