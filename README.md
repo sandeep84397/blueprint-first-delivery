@@ -19,7 +19,7 @@ skills/blueprint-first-delivery/
 Clone this repository, then copy the skill into Codex's local skills folder:
 
 ```sh
-git clone <repository-url>
+git clone https://github.com/sandeep84397/blueprint-first-delivery.git
 mkdir -p ~/.codex/skills
 cp -R blueprint-first-delivery/skills/blueprint-first-delivery ~/.codex/skills/
 ```

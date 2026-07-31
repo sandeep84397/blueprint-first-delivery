@@ -20,8 +20,10 @@ Before starting a chunk:
 
 Before marking a chunk complete:
 
-- Its acceptance criteria and component evidence pass.
-- Its contract remains compatible with dependent chunks.
+- Its focused tests and regression checks pass.
+- A blueprint-to-code review confirms the implementation matches the approved scope, ownership, and acceptance criteria.
+- Explicit contract verification confirms inputs, outputs, errors, compatibility, and boundary behavior.
+- Its contract remains compatible with dependent chunks, with no unresolved critical assumption.
 - Traceability report is updated.
 
 ## Integration gate
@@ -30,4 +32,5 @@ Run the separate integration blueprint only after relevant chunks are complete. 
 
 - Exercise cross-module flow, real boundary contracts, persistence/external effects, and failure paths.
 - Verify authorization, observability, rollback/retry behavior, and backward compatibility where applicable.
+- Incrementally integrate compatible chunks and run regression checks after each integration step.
 - Record result in traceability report. Any failure blocks delivery and returns work to the affected blueprint/chunk.

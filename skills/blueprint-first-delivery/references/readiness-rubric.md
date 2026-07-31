@@ -2,15 +2,15 @@
 
 Principal-engineer-style adversarial reviewer scores the blueprints before implementation. Author and reviewer must be different people/agents. Reviewer actively challenges contracts, hidden dependencies, ownership, failure paths, security, and claimed evidence.
 
-| Area | Points | Pass condition |
-| --- | ---: | --- |
-| Scope and acceptance criteria | 15 | Explicit, testable, bounded |
-| Module boundaries and ownership | 15 | Every change area has one clear purpose/owner; parallel work has frozen contracts and non-overlapping file/state ownership |
-| Contracts and validation | 20 | Inputs, outputs, errors, and compatibility stated |
-| Dependencies and ordering | 15 | Each dependency classified; no false independence |
-| Data, security, and failure handling | 15 | State changes, authorization, and recovery covered |
-| Verification and integration blueprint | 10 | Component evidence plus a separate integration blueprint and evidence defined |
-| Risks and traceability | 10 | Assumptions, residual risks, and criterion mapping explicit |
-| **Total** | **100** | |
+| Area | Maximum | Awarded | Deductions |
+| --- | ---: | ---: | --- |
+| Scope and acceptance criteria | 15 |  | Deduct 5 per missing or non-testable criterion; deduct remaining points if scope is unbounded |
+| Module boundaries and ownership | 15 |  | Deduct 5 per unclear owner/purpose; deduct 5 for each unsafe parallel claim |
+| Contracts and validation | 20 |  | Deduct 5 per missing input/output/error/compatibility boundary |
+| Dependencies and ordering | 15 |  | Deduct 5 per unclassified dependency or false-independence claim |
+| Data, security, and failure handling | 15 |  | Deduct 5 per missing state, authorization, or recovery treatment |
+| Verification and integration blueprint | 10 |  | Deduct 5 when focused verification or the separate integration blueprint is absent |
+| Risks and traceability | 10 |  | Deduct 5 per missing assumption/residual-risk record or missing criterion mapping |
+| **Total** | **100** |  | **Sum awarded points; record every deduction and repair.** |
 
-Readiness passes only at **>= 95/100**. Any score below 95 blocks implementation. List deductions and required repairs; revise and re-review independently.
+Readiness passes only at **>= 95/100**. Any score below 95 blocks implementation. **No unresolved critical risk** is a separate veto: it blocks implementation even at 95/100 or higher. List deductions and required repairs; revise and re-review independently. Apply the same scoring and veto to each implementation chunk before its gate.
