@@ -518,6 +518,21 @@ def _validate_outcome_backward_reference(files: dict[str, str]) -> None:
             "references/outcome-backward-planning.md",
             f"missing reconciliation report field: {field}",
         )
+    template_header = next(
+        (
+            line
+            for line in files["references/blueprint-templates.md"].splitlines()
+            if line.startswith("| Trigger ID |")
+        ),
+        "",
+    )
+    for field in OUTCOME_BACKWARD_RECONCILIATION_FIELDS:
+        _require(
+            template_header,
+            field,
+            "references/blueprint-templates.md",
+            f"missing reconciliation template field: {field}",
+        )
 
 
 def _validate_rubric(text: str) -> None:

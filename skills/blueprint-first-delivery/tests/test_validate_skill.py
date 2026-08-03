@@ -120,6 +120,16 @@ OUTCOME_BACKWARD_RECONCILIATION_FIELDS = (
     "State",
     "Module-freeze impact",
 )
+OUTCOME_BACKWARD_WORKFLOW = (
+    "1. Define the outcome contract: actor, observable end state, exclusions, and objective acceptance evidence. A date or proposed implementation is a constraint, not an outcome. Record a user-owned ambiguity and wait.",
+    "2. Explore the existing architecture. Record architecture evidence: locations/symbols, conventions, dependencies/contracts/state owners, test/build entrypoints, unresolved questions, or literal status `greenfield` evidence. Do not score an existing-codebase blueprint without it.",
+    "3. Run the backward prerequisite pass and forward feasibility pass using references/outcome-backward-planning.md. Backward and forward analysis must reconcile before modules are frozen. Record rerun reason, preserved and invalidated findings, owner, scope, and count. The same unresolved trigger hard-blocks; no third analysis pass.",
+    "4. Request principal-engineer-style adversarial review. Reviewer must not author the scored blueprint. PASS freezes modules; BLOCKED keeps readiness unscorable.",
+    "5. Only after PASS, split frozen modules into the smallest single-responsibility chunks. Classify independent, ordered, or integration-only. Apply the model routing policy and select the cheapest capable tier.",
+    "6. Apply the readiness rubric. Overall and each chunk need >= 95/100 readiness. Any critical risk vetoes implementation.",
+    "7. Implement in dependency order. Before each chunk, satisfy its chunk gate. Incrementally integrate compatible chunks; execute the separate integration blueprint. Unit tests alone never satisfy integration.",
+    "8. Publish a traceability report: outcome criterion → acceptance evidence → backward condition → prerequisite/blocker → forward transition → reconciliation decision → module → chunk → evidence → integration result → status/residual risk.",
+)
 EXPECTED_RUBRIC_ROWS = (
     ("Requirement clarity", 15, "Deduct 5 for missing problem/outcome; deduct 5 for ambiguous in/out scope or constraints; deduct 5 for missing affected modules."),
     ("Blueprint completeness", 15, "Deduct 3 each for missing architecture evidence, module responsibility/data flow, state ownership, failure/rollback path, or separate integration blueprint."),
@@ -288,6 +298,30 @@ class ValidateSkillTests(unittest.TestCase):
                     result = self.run_validator()
                     self.assertEqual(1, result.returncode, result.stderr)
                     self.assertIn(f"missing reconciliation report field: {field}", result.stderr)
+                finally:
+                    path.write_text(original)
+
+    def test_outcome_backward_workflow_is_verbatim(self):
+        skill = (SKILL_ROOT / "SKILL.md").read_text()
+        self.assertIn("\n".join(OUTCOME_BACKWARD_WORKFLOW), skill)
+
+    def test_every_template_reconciliation_field_is_enforced(self):
+        path = self.skill / "references" / "blueprint-templates.md"
+        original = path.read_text()
+        header = next(
+            line for line in original.splitlines()
+            if line.startswith("| Trigger ID |")
+        )
+        for field in OUTCOME_BACKWARD_RECONCILIATION_FIELDS:
+            with self.subTest(field=field):
+                path.write_text(original.replace(header, header.replace(field, "removed", 1), 1))
+                try:
+                    result = self.run_validator()
+                    self.assertEqual(1, result.returncode, result.stderr)
+                    self.assertIn(
+                        f"missing reconciliation template field: {field}",
+                        result.stderr,
+                    )
                 finally:
                     path.write_text(original)
 

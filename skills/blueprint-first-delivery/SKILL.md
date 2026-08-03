@@ -5,14 +5,16 @@ description: Use when a feature, refactor, or multi-part change needs a delivery
 
 # Blueprint-first delivery
 
-1. Define the outcome contract: actor, observable end state, exclusions, and objective acceptance evidence. A date or proposed implementation is a constraint, not an outcome. Record user-owned ambiguity and wait.
-2. Explore the existing architecture. Record architecture evidence: locations/symbols, contracts/state owners, test/build entrypoints, unresolved questions, or literal status `greenfield` evidence. Do not score an existing-codebase blueprint without it; boundary/contract absence is a critical-risk veto.
-3. Run backward prerequisite and forward feasibility passes using references/outcome-backward-planning.md. Backward and forward analysis must reconcile before modules are frozen. Record rerun reason, preserved/invalidated findings, owner, scope, count. Same unresolved trigger hard-blocks; no third analysis pass.
+1. Define the outcome contract: actor, observable end state, exclusions, and objective acceptance evidence. A date or proposed implementation is a constraint, not an outcome. Record a user-owned ambiguity and wait.
+2. Explore the existing architecture. Record architecture evidence: locations/symbols, conventions, dependencies/contracts/state owners, test/build entrypoints, unresolved questions, or literal status `greenfield` evidence. Do not score an existing-codebase blueprint without it.
+3. Run the backward prerequisite pass and forward feasibility pass using references/outcome-backward-planning.md. Backward and forward analysis must reconcile before modules are frozen. Record rerun reason, preserved and invalidated findings, owner, scope, and count. The same unresolved trigger hard-blocks; no third analysis pass.
 4. Request principal-engineer-style adversarial review. Reviewer must not author the scored blueprint. PASS freezes modules; BLOCKED keeps readiness unscorable.
-5. Only after PASS, split frozen modules into the smallest single-responsibility chunks. Classify independent, ordered, or integration-only. Apply the [model routing policy](references/model-routing.md): cheapest capable tier. Load only the active runtime mapping. Record floor, dependencies, digest, review, override, and observed execution. A below-floor override remains blocked. Parallel requires frozen contracts and non-overlapping file/state ownership.
-6. Apply the [readiness rubric](references/readiness-rubric.md). Overall and each chunk need **>= 95/100 readiness**. Any critical risk vetoes implementation. This is process evidence, not a mathematical probability of correctness or reliability.
+5. Only after PASS, split frozen modules into the smallest single-responsibility chunks. Classify independent, ordered, or integration-only. Apply the model routing policy and select the cheapest capable tier.
+6. Apply the readiness rubric. Overall and each chunk need >= 95/100 readiness. Any critical risk vetoes implementation.
 7. Implement in dependency order. Before each chunk, satisfy its chunk gate. Incrementally integrate compatible chunks; execute the separate integration blueprint. Unit tests alone never satisfy integration.
 8. Publish a traceability report: outcome criterion → acceptance evidence → backward condition → prerequisite/blocker → forward transition → reconciliation decision → module → chunk → evidence → integration result → status/residual risk.
+
+Routing: Load only the active runtime mapping. Record floor, topology, dependencies, digest, review, override, and observed execution. A below-floor override remains blocked. Parallel requires frozen contracts and non-overlapping file/state ownership. Readiness is process evidence, not a mathematical probability of correctness or reliability.
 
 Use optional Agent Brain; it never replaces review, tests, contracts, or gates.
 
@@ -32,5 +34,5 @@ Pressure rules:
 - Ownership / ordering: `<classification, contracts, file/state owners>`.
 - Chunk gates: start gate = `<status/evidence>`; completion gate = `<tests, regression, contracts, blueprint-to-code review>`.
 - Integration gate: separate blueprint = `<status>`; separate gate = `<status/evidence>`; unit tests alone are insufficient.
-- Model route: `<tier/floor, topology/group, active mapping version/digest, reviewer, transitions, override status, observed execution or blocking evidence>`.
-- Traceability: `<criterion → decision → chunk → evidence → integration result → status/risk>`.
+- Model route: `<tier/floor, topology, mapping digest, review, transitions, override, observed execution/block>`.
+- Traceability: `<criterion → decision → chunk → evidence → integration/status/risk>`.
