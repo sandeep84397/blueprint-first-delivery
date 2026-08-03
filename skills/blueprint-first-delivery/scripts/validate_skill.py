@@ -14,11 +14,13 @@ MAX_FILE_BYTES = 256 * 1024
 METADATA_FILES = {"SKILL.md", "agents/openai.yaml"}
 ALLOWED_TOP_LEVEL = {"SKILL.md", "agents", "references", "scripts", "tests"}
 ROUTING_SCENARIO_FILE = "tests/model-routing-pressure-scenarios.md"
+OUTCOME_BACKWARD_SCENARIO_FILE = "tests/outcome-backward-pressure-scenarios.md"
 REQUIRED_FILES = (
     "SKILL.md",
     "agents/openai.yaml",
     "references/blueprint-templates.md",
     "references/model-routing.md",
+    "references/outcome-backward-planning.md",
     "references/readiness-rubric.md",
     "references/review-and-gate-checklists.md",
     "references/runtime-mappings/codex.md",
@@ -33,6 +35,7 @@ REQUIRED_FILES = (
     "tests/test-validator-negative-fixtures.sh",
     "tests/test_validate_skill.py",
     ROUTING_SCENARIO_FILE,
+    OUTCOME_BACKWARD_SCENARIO_FILE,
 )
 RUNTIME_MAPPING_FILES = (
     "references/runtime-mappings/codex.md",
@@ -41,6 +44,7 @@ RUNTIME_MAPPING_FILES = (
 NEUTRAL_ROUTING_FILES = (
     "SKILL.md",
     "references/model-routing.md",
+    "references/outcome-backward-planning.md",
     "references/blueprint-templates.md",
     "references/readiness-rubric.md",
     "references/review-and-gate-checklists.md",
@@ -111,6 +115,46 @@ ROUTING_SCENARIO_ROWS = (
     ("R24", "User requests below-floor override", "Override recorded; readiness blocked"),
     ("R25", "Reviewer equals author or finding remains unresolved", "Review gate blocked"),
     ("R26", "Unknown runtime or legacy blueprint resumes", "Recommendation-only; add reviewed schema before start"),
+)
+OUTCOME_BACKWARD_SCENARIO_ROWS = (
+    ("OB01", "A completion date is offered without an observable end state", "Block; ask for outcome and acceptance evidence"),
+    ("OB02", "Architecture evidence cannot prove a required contract", "Module freeze blocked; readiness unscorable"),
+    ("OB03", "Backward and forward paths disagree about a producer", "Report conflict; rerun affected scope only"),
+    ("OB04", "A user-owned source-of-truth decision is ambiguous", "Wait; no automatic rerun"),
+    ("OB05", "Evidence contradicts one recorded condition", "Notify; preserve valid findings; allow one scoped rerun"),
+    ("OB06", "The same unresolved trigger recurs without new evidence", "Hard block; no third pass"),
+    ("OB07", "Proposed modules exist before reconciliation passes", "Modules provisional; no chunking or scoring"),
+    ("OB08", "Outcome-backward gate passes with independent review", "Freeze modules; then chunk and route work"),
+)
+OUTCOME_BACKWARD_REFERENCE_REQUIREMENTS = (
+    ("references/outcome-backward-planning.md", "## Outcome contract", "missing observable-outcome contract"),
+    ("references/outcome-backward-planning.md", "## Backward prerequisite pass", "missing backward-pass contract"),
+    ("references/outcome-backward-planning.md", "## Prerequisite and blocker register", "missing blocker register"),
+    ("references/outcome-backward-planning.md", "user-owned, evidence-owned, external, technical, contract, security, integration", "missing blocker classifications"),
+    ("references/outcome-backward-planning.md", "## Forward feasibility pass", "missing forward-pass contract"),
+    ("references/outcome-backward-planning.md", "## Reconciliation loop", "missing reconciliation contract"),
+    ("references/outcome-backward-planning.md", "## Module-freeze gate", "missing module-freeze gate"),
+    ("references/outcome-backward-planning.md", "## Analysis depth", "missing lightweight/full analysis policy"),
+    ("references/outcome-backward-planning.md", "## Compatibility", "missing compatibility guidance"),
+    ("references/outcome-backward-planning.md", "No third analysis pass", "missing repeated-trigger hard block"),
+    ("references/outcome-backward-planning.md", "readiness is unscorable", "missing pre-score hard gate"),
+    ("references/outcome-backward-planning.md", "No UI, viewer, HTML, extension, or GitHub Pages artifact", "missing visualization boundary"),
+)
+OUTCOME_BACKWARD_RECONCILIATION_FIELDS = (
+    "Trigger ID",
+    "Trigger type",
+    "Discovered at stage",
+    "Conflict",
+    "Affected findings",
+    "Preserved findings",
+    "Invalidated findings",
+    "Required input or evidence",
+    "Owner",
+    "Decision and rationale",
+    "Rerun scope",
+    "Rerun count",
+    "State",
+    "Module-freeze impact",
 )
 POLICY_SEMANTIC_REQUIREMENTS = (
     ("R01", "Exact extraction with every Light predicate passes routes Light.", "missing exact-extraction Light result"),
@@ -432,6 +476,30 @@ def _validate_routing_scenarios(text: str) -> None:
         )
 
 
+def _validate_outcome_backward_scenarios(text: str) -> None:
+    for scenario_id, pressure_case, expected_result in OUTCOME_BACKWARD_SCENARIO_ROWS:
+        row = f"| {scenario_id} | {pressure_case} | {expected_result} |"
+        _require(
+            text,
+            row,
+            OUTCOME_BACKWARD_SCENARIO_FILE,
+            f"outcome-backward pressure scenario mismatch: {scenario_id}",
+        )
+
+
+def _validate_outcome_backward_reference(files: dict[str, str]) -> None:
+    for relative, required, reason in OUTCOME_BACKWARD_REFERENCE_REQUIREMENTS:
+        _require(files[relative], required, relative, reason)
+    text = files["references/outcome-backward-planning.md"]
+    for field in OUTCOME_BACKWARD_RECONCILIATION_FIELDS:
+        _require(
+            text,
+            field,
+            "references/outcome-backward-planning.md",
+            f"missing reconciliation report field: {field}",
+        )
+
+
 def _validate_rubric(text: str) -> None:
     for legacy in LEGACY_RUBRIC_ROWS:
         if f"| {legacy} |" in text:
@@ -541,6 +609,8 @@ def validate(root_argument: str) -> None:
     _validate_openai_yaml(files["agents/openai.yaml"])
     _validate_model_routing(files)
     _validate_routing_scenarios(files[ROUTING_SCENARIO_FILE])
+    _validate_outcome_backward_scenarios(files[OUTCOME_BACKWARD_SCENARIO_FILE])
+    _validate_outcome_backward_reference(files)
 
     skill = files["SKILL.md"]
     templates = files["references/blueprint-templates.md"]

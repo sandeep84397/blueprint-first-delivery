@@ -78,6 +78,36 @@ ROUTE_WORKFLOW_REQUIREMENTS = (
     ("references/review-and-gate-checklists.md", "Deep or Maximum", "missing high-tier execution gate"),
     ("references/review-and-gate-checklists.md", "observed model and effort", "missing observed route evidence"),
 )
+OUTCOME_BACKWARD_REFERENCE_REQUIREMENTS = (
+    ("references/outcome-backward-planning.md", "## Outcome contract", "missing observable-outcome contract"),
+    ("references/outcome-backward-planning.md", "## Backward prerequisite pass", "missing backward-pass contract"),
+    ("references/outcome-backward-planning.md", "## Prerequisite and blocker register", "missing blocker register"),
+    ("references/outcome-backward-planning.md", "user-owned, evidence-owned, external, technical, contract, security, integration", "missing blocker classifications"),
+    ("references/outcome-backward-planning.md", "## Forward feasibility pass", "missing forward-pass contract"),
+    ("references/outcome-backward-planning.md", "## Reconciliation loop", "missing reconciliation contract"),
+    ("references/outcome-backward-planning.md", "## Module-freeze gate", "missing module-freeze gate"),
+    ("references/outcome-backward-planning.md", "## Analysis depth", "missing lightweight/full analysis policy"),
+    ("references/outcome-backward-planning.md", "## Compatibility", "missing compatibility guidance"),
+    ("references/outcome-backward-planning.md", "No third analysis pass", "missing repeated-trigger hard block"),
+    ("references/outcome-backward-planning.md", "readiness is unscorable", "missing pre-score hard gate"),
+    ("references/outcome-backward-planning.md", "No UI, viewer, HTML, extension, or GitHub Pages artifact", "missing visualization boundary"),
+)
+OUTCOME_BACKWARD_RECONCILIATION_FIELDS = (
+    "Trigger ID",
+    "Trigger type",
+    "Discovered at stage",
+    "Conflict",
+    "Affected findings",
+    "Preserved findings",
+    "Invalidated findings",
+    "Required input or evidence",
+    "Owner",
+    "Decision and rationale",
+    "Rerun scope",
+    "Rerun count",
+    "State",
+    "Module-freeze impact",
+)
 EXPECTED_RUBRIC_ROWS = (
     ("Requirement clarity", 15, "Deduct 5 for missing problem/outcome; deduct 5 for ambiguous in/out scope or constraints; deduct 5 for missing affected modules."),
     ("Blueprint completeness", 15, "Deduct 3 each for missing architecture evidence, module responsibility/data flow, state ownership, failure/rollback path, or separate integration blueprint."),
@@ -177,6 +207,57 @@ class ValidateSkillTests(unittest.TestCase):
                         f"routing pressure scenario mismatch: {scenario_id}",
                         result.stderr,
                     )
+                finally:
+                    path.write_text(original)
+
+    def test_outcome_backward_contract_files_exist(self):
+        for relative in (
+            "references/outcome-backward-planning.md",
+            OUTCOME_BACKWARD_SCENARIO_FILE,
+        ):
+            with self.subTest(relative=relative):
+                self.assertTrue((SKILL_ROOT / relative).is_file(), relative)
+
+    def test_every_outcome_backward_reference_requirement_is_enforced(self):
+        for relative, required, expected in OUTCOME_BACKWARD_REFERENCE_REQUIREMENTS:
+            with self.subTest(relative=relative, required=required):
+                path = self.skill / relative
+                original = path.read_text()
+                path.write_text(original.replace(required, "removed", 1))
+                try:
+                    result = self.run_validator()
+                    self.assertEqual(1, result.returncode, result.stderr)
+                    self.assertIn(expected, result.stderr)
+                finally:
+                    path.write_text(original)
+
+    def test_every_outcome_backward_pressure_oracle_is_enforced(self):
+        path = self.skill / OUTCOME_BACKWARD_SCENARIO_FILE
+        original = path.read_text()
+        for scenario_id, pressure_case, expected_result in OUTCOME_BACKWARD_SCENARIO_ROWS:
+            row = f"| {scenario_id} | {pressure_case} | {expected_result} |"
+            with self.subTest(scenario_id=scenario_id):
+                path.write_text(original.replace(row, "| removed |", 1))
+                try:
+                    result = self.run_validator()
+                    self.assertEqual(1, result.returncode, result.stderr)
+                    self.assertIn(
+                        f"outcome-backward pressure scenario mismatch: {scenario_id}",
+                        result.stderr,
+                    )
+                finally:
+                    path.write_text(original)
+
+    def test_every_reconciliation_report_field_is_enforced(self):
+        path = self.skill / "references" / "outcome-backward-planning.md"
+        original = path.read_text()
+        for field in OUTCOME_BACKWARD_RECONCILIATION_FIELDS:
+            with self.subTest(field=field):
+                path.write_text(original.replace(field, "removed", 1))
+                try:
+                    result = self.run_validator()
+                    self.assertEqual(1, result.returncode, result.stderr)
+                    self.assertIn(f"missing reconciliation report field: {field}", result.stderr)
                 finally:
                     path.write_text(original)
 
