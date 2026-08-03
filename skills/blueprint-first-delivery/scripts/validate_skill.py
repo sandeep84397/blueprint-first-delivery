@@ -126,6 +126,18 @@ OUTCOME_BACKWARD_SCENARIO_ROWS = (
     ("OB07", "Proposed modules exist before reconciliation passes", "Modules provisional; no chunking or scoring"),
     ("OB08", "Outcome-backward gate passes with independent review", "Freeze modules; then chunk and route work"),
 )
+OUTCOME_BACKWARD_WORKFLOW_REQUIREMENTS = (
+    ("SKILL.md", "1. Define the outcome contract", "missing outcome-contract stage"),
+    ("SKILL.md", "Backward and forward analysis must reconcile before modules are frozen.", "missing convergence-before-freeze gate"),
+    ("SKILL.md", "Outcome-backward gate =", "missing blocked outcome-backward field"),
+    ("references/blueprint-templates.md", "## Outcome-Backward Plan", "missing outcome-backward template"),
+    ("references/blueprint-templates.md", "### Reconciliation history", "missing reconciliation-history template"),
+    ("references/review-and-gate-checklists.md", "## Outcome-backward planning gate", "missing outcome-backward review gate"),
+    ("references/review-and-gate-checklists.md", "No automatic rerun occurs before the answer.", "missing user-owned wait rule"),
+    ("references/review-and-gate-checklists.md", "No third analysis pass", "missing repeated-trigger block"),
+    ("references/readiness-rubric.md", "Outcome-backward planning is a separate pre-score gate.", "missing separate pre-score gate"),
+    ("references/readiness-rubric.md", "If it is not `PASS`, readiness is **unscorable**.", "missing unscorable outcome-backward rule"),
+)
 OUTCOME_BACKWARD_REFERENCE_REQUIREMENTS = (
     ("references/outcome-backward-planning.md", "## Outcome contract", "missing observable-outcome contract"),
     ("references/outcome-backward-planning.md", "## Backward prerequisite pass", "missing backward-pass contract"),
@@ -526,10 +538,11 @@ def _validate_rubric(text: str) -> None:
     _require(text, "No unresolved critical risk", "references/readiness-rubric.md", "missing critical-risk veto")
     _require(text, "Apply this complete rubric", "references/readiness-rubric.md", "missing per-chunk scoring requirement")
     _require(text, "unscorable", "references/readiness-rubric.md", "missing architecture-evidence hard gate")
+    _require(text, "If it is not `PASS`, readiness is **unscorable**.", "references/readiness-rubric.md", "missing unscorable outcome-backward rule")
 
 
 def _validate_workflow_contract(files: dict[str, str]) -> None:
-    requirements = (
+    requirements = OUTCOME_BACKWARD_WORKFLOW_REQUIREMENTS + (
         ("SKILL.md", "Do not score an existing-codebase blueprint", "missing architecture-evidence hard gate"),
         ("SKILL.md", "literal status `greenfield`", "missing literal greenfield evidence rule"),
         ("SKILL.md", "principal-engineer-style adversarial review", "missing independent adversarial review"),
@@ -624,7 +637,7 @@ def validate(root_argument: str) -> None:
     templates = files["references/blueprint-templates.md"]
     checklist = files["references/review-and-gate-checklists.md"]
     rubric = files["references/readiness-rubric.md"]
-    _require(skill, "1. Explore the existing architecture", "SKILL.md", "missing architecture exploration requirement")
+    _require(skill, "2. Explore the existing architecture", "SKILL.md", "missing architecture exploration requirement")
     _require(skill, "Record architecture evidence", "SKILL.md", "missing architecture evidence requirement")
     _require(skill, "smallest single-responsibility chunk", "SKILL.md", "missing smallest-chunk requirement")
     _require(skill, ">= 95/100 readiness", "SKILL.md", "missing per-chunk readiness threshold")

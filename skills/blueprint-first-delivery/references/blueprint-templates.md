@@ -2,6 +2,45 @@
 
 Write every blueprint in plain English. Create one blueprint per module or bounded change area, plus the separate integration blueprint below.
 
+## Outcome-Backward Plan
+
+### Observable outcome
+- Actor and end state:
+- Excluded results:
+- Date or implementation constraints:
+
+### Objective acceptance evidence
+- Criterion ID / observation / evidence source / pass condition / owner:
+
+### Current architecture evidence
+- Locations, contracts, state owners, test/build entry points, gaps:
+
+### Backward necessary-condition chain
+- Downstream condition / necessary predecessor / reason / evidence or assumption / stop condition:
+
+### Prerequisite and blocker register
+| ID | Required condition | Why required | Classification | Owner | Evidence | Affected capability | Status | Resolution |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- |
+
+### Forward feasibility path
+- Verified start / transition / output / failure route / verification point:
+
+### Reconciliation history
+| Trigger ID | Trigger type | Discovered at stage | Conflict | Affected findings | Preserved findings | Invalidated findings | Required input or evidence | Owner | Decision and rationale | Rerun scope | Rerun count | State | Module-freeze impact |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | ---: | --- | --- |
+
+### Module-freeze decision
+- PASS or BLOCKED, reviewer, rationale, critical prerequisites, residual risk:
+
+### Approved modules
+- Responsibility / contracts / state / integration owner:
+
+### Chunk and integration inputs
+- Dependency class / ownership / verification / route evidence:
+
+### Residual assumptions and risks
+- Bounded uncertainty, owner, next verification:
+
 ```md
 ## <module/change area>
 

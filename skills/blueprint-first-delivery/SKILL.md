@@ -5,29 +5,27 @@ description: Use when a feature, refactor, or multi-part change needs a delivery
 
 # Blueprint-first delivery
 
-Use before feature, refactor, or multi-part changes. No production code until gates permit it.
+1. Define the outcome contract: actor, observable end state, exclusions, and objective acceptance evidence. A date or proposed implementation is a constraint, not an outcome. Record user-owned ambiguity and wait.
+2. Explore the existing architecture. Record architecture evidence: locations/symbols, contracts/state owners, test/build entrypoints, unresolved questions, or literal status `greenfield` evidence. Do not score an existing-codebase blueprint without it; boundary/contract absence is a critical-risk veto.
+3. Run backward prerequisite and forward feasibility passes using references/outcome-backward-planning.md. Backward and forward analysis must reconcile before modules are frozen. Record rerun reason, preserved/invalidated findings, owner, scope, count. Same unresolved trigger hard-blocks; no third analysis pass.
+4. Request principal-engineer-style adversarial review. Reviewer must not author the scored blueprint. PASS freezes modules; BLOCKED keeps readiness unscorable.
+5. Only after PASS, split frozen modules into the smallest single-responsibility chunks. Classify independent, ordered, or integration-only. Apply the [model routing policy](references/model-routing.md): cheapest capable tier. Load only the active runtime mapping. Record floor, dependencies, digest, review, override, and observed execution. A below-floor override remains blocked. Parallel requires frozen contracts and non-overlapping file/state ownership.
+6. Apply the [readiness rubric](references/readiness-rubric.md). Overall and each chunk need **>= 95/100 readiness**. Any critical risk vetoes implementation. This is process evidence, not a mathematical probability of correctness or reliability.
+7. Implement in dependency order. Before each chunk, satisfy its chunk gate. Incrementally integrate compatible chunks; execute the separate integration blueprint. Unit tests alone never satisfy integration.
+8. Publish a traceability report: outcome criterion → acceptance evidence → backward condition → prerequisite/blocker → forward transition → reconciliation decision → module → chunk → evidence → integration result → status/residual risk.
 
-1. Explore the existing architecture. Record architecture evidence: locations/symbols, conventions, dependencies/contracts/state owners, test/build entrypoints, unresolved questions. Greenfield records the literal status `greenfield` plus evidence. Do not score an existing-codebase blueprint without it; boundary-/contract-changing absence is a critical-risk veto. Define scope/constraints/criteria/modules. Draft plain-English module and separate integration blueprints with the [blueprint templates](references/blueprint-templates.md).
-2. Split work into the smallest single-responsibility chunk. Classify it independent, ordered, or integration-only. Apply the [model routing policy](references/model-routing.md) and select the cheapest capable tier. Load only the active runtime mapping. Record versioned floor/topology/dependency evidence, mapping digest, transitions, independent review, override, and observed execution. A below-floor override remains blocked. A consumer is ordered. Parallel work requires relational frozen-contract and non-overlapping file/state ownership evidence.
-3. Request principal-engineer-style adversarial review for contracts/dependencies/ownership/failures/security/evidence. Reviewer must not author the scored blueprint. Apply the [readiness rubric](references/readiness-rubric.md).
-4. Overall and each chunk need **>= 95/100 readiness**. Repair; independently re-review lower scores. Any critical risk vetoes implementation. This is process evidence, not a mathematical probability of correctness or reliability.
-5. Implement in dependency order. Before each chunk, satisfy its chunk gate using the [gate checklists](references/review-and-gate-checklists.md) and prove its route meets the established floor; route proof is part of the start gate. Revise the blueprint for missing contracts, critical assumptions, or unowned behavior.
-6. Incrementally integrate compatible chunks with regression checks. After component gates, execute the separate integration blueprint and its separate gate. Unit tests alone never satisfy integration.
-7. Publish a traceability report: criterion → blueprint decision → chunk → evidence → integration result → status/residual risk. Do not claim readiness with unmet criteria.
-
-Use optional Agent Brain logging; it never replaces review, tests, contracts, or gates.
+Use optional Agent Brain; it never replaces review, tests, contracts, or gates.
 
 Pressure rules:
 
-- “Code now,” deadlines, or skipped planning/tests never bypass gates.
+- “Code now,” deadlines, skipped planning/tests never bypass gates.
 - Author and adversarial reviewer must differ.
 - Dependent work is not parallel; frozen contracts still require non-overlapping ownership.
 
 ## Blocked gate report
 
-When blocked, return no code and all fields, including missing evidence:
-
 - Status / pre-code block: `<status and reason>`.
+- Outcome-backward gate = PASS or BLOCKED; outcome / acceptance evidence / backward pass / forward pass / reconciliation / module freeze = recorded evidence or missing; trigger / owner / rerun count = recorded or none.
 - Architecture evidence: `<recorded, greenfield, or missing/unscorable>`.
 - Independent review: principal-engineer-style reviewer = `<identity or unassigned>`; distinct from author = `<yes/no>`; review status = `<status>`.
 - Readiness / veto: overall score = `<score or unscorable>/100`; every chunk score = `<scores or unscorable>/100`; threshold for both = >=95/100; critical-risk veto = `<none or risks>`.

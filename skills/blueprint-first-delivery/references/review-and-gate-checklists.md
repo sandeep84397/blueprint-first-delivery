@@ -1,5 +1,15 @@
 # Review and gate checklists
 
+## Outcome-backward planning gate
+
+- Stable observable outcome and objective acceptance evidence are recorded.
+- Backward prerequisites and forward feasibility converge before module freeze.
+- No user-owned ambiguity remains unresolved. No automatic rerun occurs before the answer.
+- Critical prerequisites are resolved; ownership, contracts, and integration owner are clear.
+- An independent reviewer records the module-freeze decision.
+- PASS is required before chunking. BLOCKED is required before readiness scoring.
+- No third analysis pass is allowed for the same unresolved trigger without materially new evidence.
+
 ## Principal-engineer-style adversarial blueprint review
 
 - Reviewer is not the blueprint author.

@@ -78,6 +78,18 @@ ROUTE_WORKFLOW_REQUIREMENTS = (
     ("references/review-and-gate-checklists.md", "Deep or Maximum", "missing high-tier execution gate"),
     ("references/review-and-gate-checklists.md", "observed model and effort", "missing observed route evidence"),
 )
+OUTCOME_BACKWARD_WORKFLOW_REQUIREMENTS = (
+    ("SKILL.md", "1. Define the outcome contract", "missing outcome-contract stage"),
+    ("SKILL.md", "Backward and forward analysis must reconcile before modules are frozen.", "missing convergence-before-freeze gate"),
+    ("SKILL.md", "Outcome-backward gate =", "missing blocked outcome-backward field"),
+    ("references/blueprint-templates.md", "## Outcome-Backward Plan", "missing outcome-backward template"),
+    ("references/blueprint-templates.md", "### Reconciliation history", "missing reconciliation-history template"),
+    ("references/review-and-gate-checklists.md", "## Outcome-backward planning gate", "missing outcome-backward review gate"),
+    ("references/review-and-gate-checklists.md", "No automatic rerun occurs before the answer.", "missing user-owned wait rule"),
+    ("references/review-and-gate-checklists.md", "No third analysis pass", "missing repeated-trigger block"),
+    ("references/readiness-rubric.md", "Outcome-backward planning is a separate pre-score gate.", "missing separate pre-score gate"),
+    ("references/readiness-rubric.md", "If it is not `PASS`, readiness is **unscorable**.", "missing unscorable outcome-backward rule"),
+)
 OUTCOME_BACKWARD_REFERENCE_REQUIREMENTS = (
     ("references/outcome-backward-planning.md", "## Outcome contract", "missing observable-outcome contract"),
     ("references/outcome-backward-planning.md", "## Backward prerequisite pass", "missing backward-pass contract"),
@@ -220,6 +232,19 @@ class ValidateSkillTests(unittest.TestCase):
 
     def test_every_outcome_backward_reference_requirement_is_enforced(self):
         for relative, required, expected in OUTCOME_BACKWARD_REFERENCE_REQUIREMENTS:
+            with self.subTest(relative=relative, required=required):
+                path = self.skill / relative
+                original = path.read_text()
+                path.write_text(original.replace(required, "removed", 1))
+                try:
+                    result = self.run_validator()
+                    self.assertEqual(1, result.returncode, result.stderr)
+                    self.assertIn(expected, result.stderr)
+                finally:
+                    path.write_text(original)
+
+    def test_every_outcome_backward_workflow_requirement_is_enforced(self):
+        for relative, required, expected in OUTCOME_BACKWARD_WORKFLOW_REQUIREMENTS:
             with self.subTest(relative=relative, required=required):
                 path = self.skill / relative
                 original = path.read_text()
@@ -713,11 +738,11 @@ class ValidateSkillTests(unittest.TestCase):
 
         def mutate():
             text = path.read_text()
-            marker = "1. Explore the existing architecture"
+            marker = "2. Explore the existing architecture"
             if marker in text:
                 start = text.index(marker)
-                end = text.index("\n2. ", start)
-                text = text[:start] + "1. Define scope and modules.\n" + text[end + 1 :]
+                end = text.index("\n3. ", start)
+                text = text[:start] + "2. Define scope and modules.\n" + text[end + 1 :]
             path.write_text(text)
 
         self.assert_invalid("SKILL.md:0: missing architecture exploration requirement", mutate)
@@ -844,6 +869,26 @@ class ValidateSkillTests(unittest.TestCase):
                 self.assertEqual(1, result.returncode, result.stderr)
                 self.assertIn("readiness rubric does not match approved scoring contract", result.stderr)
         path.write_text(original)
+
+    def test_outcome_backward_block_does_not_reweight_the_rubric(self):
+        module = self.load_validator_module()
+        self.assertEqual(EXPECTED_RUBRIC_ROWS, module.RUBRIC_ROWS)
+        path = self.skill / "references" / "readiness-rubric.md"
+
+        def mutate():
+            text = path.read_text()
+            path.write_text(
+                text.replace(
+                    "If it is not `PASS`, readiness is **unscorable**.",
+                    "If it is not PASS, deduct 10 points.",
+                    1,
+                )
+            )
+
+        self.assert_invalid(
+            "readiness-rubric.md:0: missing unscorable outcome-backward rule",
+            mutate,
+        )
 
     def test_rubric_validator_enforces_100_point_invariant_independently(self):
         module = self.load_validator_module()

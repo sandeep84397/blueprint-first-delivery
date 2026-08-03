@@ -2,6 +2,10 @@
 
 Principal-engineer-style adversarial reviewer scores the blueprints before implementation. Author and reviewer must be different people/agents. Reviewer actively challenges contracts, hidden dependencies, ownership, failure paths, security, and claimed evidence.
 
+Outcome-backward planning is a separate pre-score gate. It verifies observable outcome evidence, backward prerequisites, forward feasibility, reconciliation, and module freeze before this rubric is applied.
+
+If it is not `PASS`, readiness is **unscorable**. Do not add, remove, or reweight rubric rows to represent an outcome-backward failure.
+
 | Area | Maximum | Awarded | Deductions |
 | --- | ---: | ---: | --- |
 | Requirement clarity | 15 |  | Deduct 5 for missing problem/outcome; deduct 5 for ambiguous in/out scope or constraints; deduct 5 for missing affected modules. |
