@@ -390,8 +390,21 @@ def _validate_workflow_contract(files: dict[str, str]) -> None:
         ("SKILL.md", "separate gate =", "missing blocked separate-gate subfield"),
         ("SKILL.md", "Traceability:", "missing blocked traceability field"),
         ("SKILL.md", "optional Agent Brain", "missing optional Agent Brain boundary"),
+        ("SKILL.md", "cheapest capable tier", "missing cheapest-capable routing rule"),
+        ("SKILL.md", "Load only the active runtime mapping", "missing active-runtime-only rule"),
+        ("SKILL.md", "below-floor override", "missing below-floor override gate"),
+        ("SKILL.md", "observed execution", "missing honest execution evidence"),
+        ("references/blueprint-templates.md", "schema_version: 1", "missing routing schema version"),
+        ("references/blueprint-templates.md", "parallel_group:", "missing relational parallel evidence"),
+        ("references/blueprint-templates.md", "mapping_sha256:", "missing runtime mapping digest"),
+        ("references/blueprint-templates.md", "    status: pending\n    rationale: null\n    findings:", "missing reviewer rationale"),
+        ("references/blueprint-templates.md", "route_history:", "missing route transition history"),
+        ("references/blueprint-templates.md", "execution_evidence:", "missing execution evidence schema"),
         ("references/blueprint-templates.md", "Integration result", "missing integration traceability field"),
         ("references/review-and-gate-checklists.md", "Do not score an existing-codebase blueprint", "missing architecture checklist hard gate"),
+        ("references/review-and-gate-checklists.md", "under-routing and over-routing", "missing routing review challenge"),
+        ("references/review-and-gate-checklists.md", "Deep or Maximum", "missing high-tier execution gate"),
+        ("references/review-and-gate-checklists.md", "observed model and effort", "missing observed route evidence"),
         ("references/review-and-gate-checklists.md", "focused tests", "missing focused-test completion gate"),
         ("references/review-and-gate-checklists.md", "blueprint-to-code review", "missing blueprint-to-code review gate"),
         ("references/review-and-gate-checklists.md", "Explicit contract verification", "missing contract verification gate"),
@@ -413,6 +426,12 @@ def _validate_workflow_contract(files: dict[str, str]) -> None:
         ("tests/forward-test-with-skill.md", "Compressed-final score variance: **0 points**", "missing compressed-final variance review"),
     )
     for relative, value, reason in requirements:
+        if (
+            relative == "SKILL.md"
+            and value == "observed execution"
+            and files[relative].count(value) < 2
+        ):
+            raise PackageError(relative, 0, reason)
         _require(files[relative], value, relative, reason)
 
 

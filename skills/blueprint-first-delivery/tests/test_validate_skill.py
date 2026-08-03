@@ -22,6 +22,21 @@ NEW_PACKAGE_REQUIRED_FILES = ROUTING_REQUIRED_FILES + (
     "scripts/verify_global_boundary.py",
     "tests/test_verify_global_boundary.py",
 )
+ROUTE_WORKFLOW_REQUIREMENTS = (
+    ("SKILL.md", "cheapest capable tier", "missing cheapest-capable routing rule"),
+    ("SKILL.md", "Load only the active runtime mapping", "missing active-runtime-only rule"),
+    ("SKILL.md", "below-floor override", "missing below-floor override gate"),
+    ("SKILL.md", "observed execution", "missing honest execution evidence"),
+    ("references/blueprint-templates.md", "schema_version: 1", "missing routing schema version"),
+    ("references/blueprint-templates.md", "parallel_group:", "missing relational parallel evidence"),
+    ("references/blueprint-templates.md", "mapping_sha256:", "missing runtime mapping digest"),
+    ("references/blueprint-templates.md", "    status: pending\n    rationale: null\n    findings:", "missing reviewer rationale"),
+    ("references/blueprint-templates.md", "route_history:", "missing route transition history"),
+    ("references/blueprint-templates.md", "execution_evidence:", "missing execution evidence schema"),
+    ("references/review-and-gate-checklists.md", "under-routing and over-routing", "missing routing review challenge"),
+    ("references/review-and-gate-checklists.md", "Deep or Maximum", "missing high-tier execution gate"),
+    ("references/review-and-gate-checklists.md", "observed model and effort", "missing observed route evidence"),
+)
 EXPECTED_RUBRIC_ROWS = (
     ("Requirement clarity", 15, "Deduct 5 for missing problem/outcome; deduct 5 for ambiguous in/out scope or constraints; deduct 5 for missing affected modules."),
     ("Blueprint completeness", 15, "Deduct 3 each for missing architecture evidence, module responsibility/data flow, state ownership, failure/rollback path, or separate integration blueprint."),
@@ -91,6 +106,48 @@ class ValidateSkillTests(unittest.TestCase):
         for relative in ROUTING_REQUIRED_FILES:
             with self.subTest(relative=relative):
                 self.assertTrue((SKILL_ROOT / relative).is_file(), relative)
+
+    def test_route_aware_workflow_contract_is_required(self):
+        skill = (SKILL_ROOT / "SKILL.md").read_text()
+        template = (SKILL_ROOT / "references" / "blueprint-templates.md").read_text()
+        checklist = (
+            SKILL_ROOT / "references" / "review-and-gate-checklists.md"
+        ).read_text()
+        for value in (
+            "cheapest capable tier",
+            "Load only the active runtime mapping",
+            "below-floor override",
+            "observed execution",
+        ):
+            self.assertIn(value, skill)
+        for value in (
+            "schema_version: 1",
+            "parallel_group:",
+            "mapping_sha256:",
+            "    status: pending\n    rationale: null\n    findings:",
+            "route_history:",
+            "execution_evidence:",
+        ):
+            self.assertIn(value, template)
+        for value in (
+            "under-routing and over-routing",
+            "Deep or Maximum",
+            "observed model and effort",
+        ):
+            self.assertIn(value, checklist)
+
+    def test_every_route_workflow_requirement_is_enforced(self):
+        for relative, required, expected in ROUTE_WORKFLOW_REQUIREMENTS:
+            with self.subTest(relative=relative, required=required):
+                path = self.skill / relative
+                original = path.read_text()
+                path.write_text(original.replace(required, "removed", 1))
+                try:
+                    result = self.run_validator()
+                    self.assertEqual(1, result.returncode, result.stderr)
+                    self.assertIn(expected, result.stderr)
+                finally:
+                    path.write_text(original)
 
     def test_runtime_mapping_structure_is_enforced(self):
         for filename in ("codex.md", "claude-code.md"):

@@ -9,6 +9,10 @@
 - All modules have scope, contracts, dependencies, verification, and risks.
 - A separate integration blueprint covers every cross-module flow.
 - Dependency classification is correct: independent, ordered, or integration-only. Parallel work has frozen contracts and non-overlapping file/state ownership.
+- Review all chunk routes together; challenge under-routing and over-routing, false parallelism, risk-floor violations, unsupported execution claims, and expensive-tier inheritance.
+- Routing author and principal reviewer differ. Every finding has a disposition.
+- A below-floor override remains blocked and prevents readiness.
+- Parallel groups record member chunk IDs, dependencies, frozen contract versions/references, exclusive file/state ownership, independent verification, integration owner, and integration order.
 - Readiness score is recorded. Below 95/100: return for repair.
 
 ## Chunk gate
@@ -16,6 +20,8 @@
 Before starting a chunk:
 
 - Prerequisite ordered chunks and shared contracts are complete or explicitly stable.
+- Before a chunk starts, resolve only the active runtime mapping and verify its version/digest.
+- Deep or Maximum starts only when runtime evidence can verify the requested floor.
 - Parallel chunks have frozen contracts and non-overlapping file/state ownership.
 - Owner, acceptance criteria, and verification evidence are assigned.
 - Boundary, error, security, compatibility, and rollback impacts are understood.
@@ -26,6 +32,7 @@ Before marking a chunk complete:
 - A blueprint-to-code review confirms the implementation matches the approved scope, ownership, and acceptance criteria.
 - Explicit contract verification confirms inputs, outputs, errors, compatibility, and boundary behavior.
 - Its contract remains compatible with dependent chunks, with no unresolved critical assumption.
+- Completion evidence records observed model and effort, metadata source/time, fallback chain, route transitions, and mismatch status.
 - Traceability report is updated.
 
 ## Integration gate
