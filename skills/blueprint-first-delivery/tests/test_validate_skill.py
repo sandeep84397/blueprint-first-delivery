@@ -43,6 +43,17 @@ ROUTING_SCENARIO_ROWS = (
     ("R25", "Reviewer equals author or finding remains unresolved", "Review gate blocked"),
     ("R26", "Unknown runtime or legacy blueprint resumes", "Recommendation-only; add reviewed schema before start"),
 )
+OUTCOME_BACKWARD_SCENARIO_FILE = "tests/outcome-backward-pressure-scenarios.md"
+OUTCOME_BACKWARD_SCENARIO_ROWS = (
+    ("OB01", "A completion date is offered without an observable end state", "Block; ask for outcome and acceptance evidence"),
+    ("OB02", "Architecture evidence cannot prove a required contract", "Module freeze blocked; readiness unscorable"),
+    ("OB03", "Backward and forward paths disagree about a producer", "Report conflict; rerun affected scope only"),
+    ("OB04", "A user-owned source-of-truth decision is ambiguous", "Wait; no automatic rerun"),
+    ("OB05", "Evidence contradicts one recorded condition", "Notify; preserve valid findings; allow one scoped rerun"),
+    ("OB06", "The same unresolved trigger recurs without new evidence", "Hard block; no third pass"),
+    ("OB07", "Proposed modules exist before reconciliation passes", "Modules provisional; no chunking or scoring"),
+    ("OB08", "Outcome-backward gate passes with independent review", "Freeze modules; then chunk and route work"),
+)
 ROUTING_REQUIRED_FILES = (
     "references/model-routing.md",
     "references/runtime-mappings/codex.md",
@@ -138,6 +149,16 @@ class ValidateSkillTests(unittest.TestCase):
     def test_model_routing_pressure_rows_are_exact(self):
         text = (SKILL_ROOT / ROUTING_SCENARIO_FILE).read_text()
         for scenario_id, pressure_case, expected_result in ROUTING_SCENARIO_ROWS:
+            row = f"| {scenario_id} | {pressure_case} | {expected_result} |"
+            with self.subTest(scenario_id=scenario_id):
+                self.assertIn(row, text)
+
+    def test_outcome_backward_pressure_file_exists(self):
+        self.assertTrue((SKILL_ROOT / OUTCOME_BACKWARD_SCENARIO_FILE).is_file())
+
+    def test_outcome_backward_pressure_rows_are_exact(self):
+        text = (SKILL_ROOT / OUTCOME_BACKWARD_SCENARIO_FILE).read_text()
+        for scenario_id, pressure_case, expected_result in OUTCOME_BACKWARD_SCENARIO_ROWS:
             row = f"| {scenario_id} | {pressure_case} | {expected_result} |"
             with self.subTest(scenario_id=scenario_id):
                 self.assertIn(row, text)
