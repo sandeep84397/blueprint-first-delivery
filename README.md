@@ -24,7 +24,7 @@ Individually passing components can still fail when their contracts, state owner
 
 ## Outcome-backward planning
 
-Outcome-backward planning starts with observable acceptance evidence, then works backward through the conditions required to produce it while checking that those conditions are feasible in the current architecture. It surfaces late constraints earlier; it does not predict every future issue. Dates are constraints, not outcomes. When ambiguity would change behavior, the workflow asks users to resolve it before modules are frozen; until then, modules stay provisional.
+Outcome-backward planning starts with observable acceptance evidence, then works backward through the conditions required to produce it while checking that those conditions are feasible in the current architecture. It surfaces late constraints earlier; it does not predict every future issue. Dates are constraints, not outcomes. When ambiguity would change behavior, the workflow asks users to resolve it before modules are frozen; until then, modules stay provisional. No implementation may begin before module freeze. Model routing occurs only after module freeze.
 
 ## How Blueprint-First Delivery solves it
 
@@ -55,7 +55,7 @@ Observable outcome and acceptance evidence
 
 ## Evidence, not confidence
 
-`>=95/100` measures collected readiness evidence. It is not a mathematical probability and does not guarantee defect-free software. The score records evidence for clarity, contracts, dependencies, testability, edge cases, independent review, and integration readiness. `BLOCKED` means readiness is unscorable, not a lower numeric score.
+`>=95/100` measures collected readiness evidence. It is not a mathematical probability and does not guarantee defect-free software. The score records evidence for clarity, contracts, dependencies, testability, edge cases, independent review, and integration readiness. `BLOCKED` means readiness is unscorable, not a lower numeric score. A failed module-freeze gate leaves readiness unscorable.
 
 ## What you get
 
