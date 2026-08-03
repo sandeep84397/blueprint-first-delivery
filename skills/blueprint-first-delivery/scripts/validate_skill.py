@@ -119,7 +119,7 @@ POLICY_SEMANTIC_REQUIREMENTS = (
     ("R04", "The effective transition is max(next tier, established floor).", "missing max tier-floor transition"),
     ("R05", "Deep wins over Light whenever their signals conflict.", "missing Deep precedence"),
     ("R06", "Deep/xhigh requires review evidence.", "missing Deep/xhigh review evidence"),
-    ("R07", "Evaluate Maximum only for the hardest indivisible critical problem after xhigh evidence is insufficient;", "missing Maximum gate"),
+    ("R07", "Maximum is eligible when an xhigh Deep attempt gives concrete evidence the central problem remains unresolved,", "missing Maximum xhigh-evidence alternative"),
     ("R08", "De-escalation requires no current hard trigger, frozen reviewed decisions/contracts, an objective oracle, and no critical finding;", "missing de-escalation conditions"),
     ("R09", "a remaining security trigger blocks de-escalation.", "missing remaining-trigger de-escalation block"),
     ("R10", "Count two failures only for two distinct tested hypotheses with the same fingerprint.", "missing repeated-failure fingerprint rule"),
@@ -154,6 +154,10 @@ POLICY_ADDITIONAL_REQUIREMENTS = (
     ("Light requires an objective oracle.", "missing Light objective-oracle predicate"),
     ("Only search, extraction, classification, summarization, or mechanical transformation qualifies for Light; implementation and open-ended design do not.", "missing Light task-shape restriction"),
     ("Failure of any Light predicate requires Standard or higher.", "missing Light failure result"),
+    ("Maximum is exceptional.", "missing Maximum exceptional classification"),
+    ("or the hardest single critical-risk decision cannot be decomposed without losing the problem,", "missing Maximum indivisible-critical-risk alternative"),
+    ("or principal review records why high and xhigh are insufficient.", "missing Maximum principal-rationale alternative"),
+    ("Maximum is not routine implementation, retry without diagnosis, or multiple independent workstreams.", "missing Maximum routine-work exclusion"),
 )
 
 

@@ -290,6 +290,60 @@ class ValidateSkillTests(unittest.TestCase):
         finally:
             path.write_text(original)
 
+    def test_maximum_or_eligibility_and_exclusions_are_enforced(self):
+        path = self.skill / "references" / "model-routing.md"
+        original = path.read_text()
+        cases = (
+            (
+                "xhigh evidence alternative",
+                "Maximum is eligible when an xhigh Deep attempt gives concrete evidence the central problem remains unresolved",
+                "missing Maximum xhigh-evidence alternative",
+            ),
+            (
+                "indivisible critical-risk alternative",
+                "or the hardest single critical-risk decision cannot be decomposed without losing the problem",
+                "missing Maximum indivisible-critical-risk alternative",
+            ),
+            (
+                "principal rationale alternative",
+                "or principal review records why high and xhigh are insufficient.",
+                "missing Maximum principal-rationale alternative",
+            ),
+            (
+                "exceptional classification",
+                "Maximum is exceptional.",
+                "missing Maximum exceptional classification",
+            ),
+            (
+                "routine implementation exclusion",
+                "Maximum is not routine implementation, retry without diagnosis, or multiple independent workstreams.",
+                "missing Maximum routine-work exclusion",
+            ),
+        )
+        for name, required, expected in cases:
+            with self.subTest(name=name):
+                self.assertIn(required, original)
+                path.write_text(original.replace(required, "removed", 1))
+                try:
+                    result = self.run_validator()
+                    self.assertEqual(1, result.returncode, result.stderr)
+                    self.assertIn(expected, result.stderr)
+                finally:
+                    path.write_text(original)
+
+        inverted = original.replace(
+            "Maximum is exceptional.",
+            "Maximum is routine implementation.",
+            1,
+        )
+        path.write_text(inverted)
+        try:
+            result = self.run_validator()
+            self.assertEqual(1, result.returncode, result.stderr)
+            self.assertIn("missing Maximum exceptional classification", result.stderr)
+        finally:
+            path.write_text(original)
+
     def test_every_model_routing_semantic_rule_is_enforced(self):
         module = self.load_validator_module()
         path = self.skill / "references" / "model-routing.md"
