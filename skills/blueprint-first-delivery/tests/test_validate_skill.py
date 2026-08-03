@@ -185,6 +185,28 @@ class ValidateSkillTests(unittest.TestCase):
                     finally:
                         path.write_text(original)
 
+    def test_light_effort_only_self_promotion_is_rejected(self):
+        path = self.skill / "references" / "runtime-mappings" / "codex.md"
+        original = path.read_text()
+        light_model = self.mapping_model(original, "Light")
+        path.write_text(
+            self.replace_mapping_cell(
+                original,
+                "Light",
+                5,
+                f"`{light_model}` / `medium`",
+            )
+        )
+        try:
+            result = self.run_validator()
+            self.assertEqual(1, result.returncode, result.stderr)
+            self.assertIn(
+                "higher fallback must target a higher tier for Light",
+                result.stderr,
+            )
+        finally:
+            path.write_text(original)
+
     def test_new_package_files_are_required(self):
         for relative in NEW_PACKAGE_REQUIRED_FILES:
             with self.subTest(relative=relative):
