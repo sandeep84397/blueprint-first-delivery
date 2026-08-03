@@ -71,6 +71,14 @@ class BoundaryVerifierTests(unittest.TestCase):
         self.assertEqual(2, result.returncode)
         self.assertIn("invalid baseline", result.stderr)
 
+    def test_non_string_path_is_rejected(self):
+        self.write_baseline([
+            {"path": None, "state": "absent"},
+        ])
+        result = self.run_verifier()
+        self.assertEqual(2, result.returncode)
+        self.assertIn("invalid baseline", result.stderr)
+
 
 if __name__ == "__main__":
     unittest.main()

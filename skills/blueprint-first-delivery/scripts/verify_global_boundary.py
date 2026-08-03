@@ -47,8 +47,11 @@ def load_baseline(path):
     for row in rows:
         if not isinstance(row, dict) or set(row) != {"path", "state"}:
             raise BaselineError("each path row must contain only path and state")
-        target = Path(row["path"])
+        path_value = row["path"]
         state = row["state"]
+        if not isinstance(path_value, str):
+            raise BaselineError("path must be a string")
+        target = Path(path_value)
         if not target.is_absolute():
             raise BaselineError("baseline paths must be absolute")
         if not isinstance(state, str) or STATE_PATTERN.fullmatch(state) is None:
