@@ -491,9 +491,17 @@ def _validate_outcome_backward_reference(files: dict[str, str]) -> None:
     for relative, required, reason in OUTCOME_BACKWARD_REFERENCE_REQUIREMENTS:
         _require(files[relative], required, relative, reason)
     text = files["references/outcome-backward-planning.md"]
+    reconciliation_header = next(
+        (
+            line
+            for line in text.splitlines()
+            if line.startswith("| Trigger ID |")
+        ),
+        "",
+    )
     for field in OUTCOME_BACKWARD_RECONCILIATION_FIELDS:
         _require(
-            text,
+            reconciliation_header,
             field,
             "references/outcome-backward-planning.md",
             f"missing reconciliation report field: {field}",

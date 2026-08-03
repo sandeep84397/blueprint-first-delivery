@@ -251,9 +251,14 @@ class ValidateSkillTests(unittest.TestCase):
     def test_every_reconciliation_report_field_is_enforced(self):
         path = self.skill / "references" / "outcome-backward-planning.md"
         original = path.read_text()
+        header = next(
+            line for line in original.splitlines()
+            if line.startswith("| Trigger ID |")
+        )
         for field in OUTCOME_BACKWARD_RECONCILIATION_FIELDS:
             with self.subTest(field=field):
-                path.write_text(original.replace(field, "removed", 1))
+                mutated_header = header.replace(field, "removed", 1)
+                path.write_text(original.replace(header, mutated_header, 1))
                 try:
                     result = self.run_validator()
                     self.assertEqual(1, result.returncode, result.stderr)

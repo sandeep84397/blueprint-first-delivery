@@ -2,7 +2,7 @@
 
 ## Outcome contract
 
-state actor, observable end state, exclusions, objective acceptance evidence, and constraints. A date, milestone, or proposed implementation is not the outcome. A material ambiguous outcome is a user-owned blocker: ask one focused question and wait.
+State actor, observable end state, exclusions, objective acceptance evidence, and constraints. A date, milestone, or proposed implementation is not the outcome. A material ambiguous outcome is a user-owned blocker: ask one focused question and wait.
 
 ## Backward prerequisite pass
 
@@ -10,7 +10,7 @@ For every acceptance criterion, record a directly necessary predecessor, causal 
 
 ## Prerequisite and blocker register
 
-| ID | Required condition | Why required | Classification | responsible party | Evidence | Affected capability | status | Resolution |
+| ID | Required condition | Why required | Classification | Owner | Evidence | Affected capability | Status | Resolution |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 
 Use one of: user-owned, evidence-owned, external, technical, contract, security, integration. An accepted risk never substitutes for an unresolved critical prerequisite.
