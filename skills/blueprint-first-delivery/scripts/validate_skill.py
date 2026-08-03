@@ -113,8 +113,8 @@ ROUTING_SCENARIO_ROWS = (
     ("R26", "Unknown runtime or legacy blueprint resumes", "Recommendation-only; add reviewed schema before start"),
 )
 POLICY_SEMANTIC_REQUIREMENTS = (
-    ("R01", "Establish a hard risk floor before selecting a tier.", "missing hard-floor precedence"),
-    ("R02", "Only search, extraction, classification, summarization, or mechanical transformation qualifies for Light; implementation and open-ended design do not.", "missing Light task-shape restriction"),
+    ("R01", "Exact extraction with every Light predicate passes routes Light.", "missing exact-extraction Light result"),
+    ("R02", "Otherwise use Standard for normal bounded implementation.", "missing Standard default"),
     ("R03", "A single protected-risk trigger establishes Deep.", "missing Deep hard-risk floor"),
     ("R04", "The effective transition is max(next tier, established floor).", "missing max tier-floor transition"),
     ("R05", "Deep wins over Light whenever their signals conflict.", "missing Deep precedence"),
@@ -126,7 +126,7 @@ POLICY_SEMANTIC_REQUIREMENTS = (
     ("R11", "Reset after a material contract, oracle, signature, or causal-boundary change.", "missing failure-counter reset rule"),
     ("R12", "Ordered is mandatory for a producer-consumer dependency.", "missing producer-consumer ordering rule"),
     ("R13", "Parallel requires a parallel group whose members record chunk IDs, dependencies, frozen current contract IDs/versions/references, exclusive file/state ownership, independent verification, integration owner, and integration order.", "missing relational parallel requirements"),
-    ("R14", "Parallel is blocked by any dependency,", "missing dependency parallel block"),
+    ("R14", "Parallel is blocked only by a dependency on another parallel-group member's unfinished output,", "missing unfinished-member parallel dependency block"),
     ("R15", "overlapping state ownership,", "missing ownership parallel block"),
     ("R16", "stale contract version,", "missing stale-contract parallel block"),
     ("R17", "or missing integration owner/order.", "missing integration-order parallel block"),
@@ -139,6 +139,21 @@ POLICY_SEMANTIC_REQUIREMENTS = (
     ("R24", "A below-floor override remains blocked and readiness remains blocked.", "missing below-floor override block"),
     ("R25", "Author and principal reviewer differ; unresolved findings block review.", "missing independent-review block"),
     ("R26", "Unknown runtimes remain recommendation-only; legacy blueprints cannot resume implementation before schema review.", "missing legacy-or-unknown runtime rule"),
+)
+POLICY_ADDITIONAL_REQUIREMENTS = (
+    ("Establish a hard risk floor before selecting a tier.", "missing hard-floor precedence"),
+    ("Within Deep, xhigh requires two independent high-risk triggers", "missing xhigh two-trigger alternative"),
+    ("or an unresolved high-effort attempt with a stable root fingerprint.", "missing xhigh stable-fingerprint alternative"),
+    ("Routing review records why high is insufficient.", "missing xhigh high-insufficient rationale"),
+    ("xhigh does not automatically select Maximum.", "missing xhigh no-automatic-Maximum rule"),
+    ("Completed or common prerequisites do not block parallel work.", "missing completed-prerequisite parallel allowance"),
+    ("Light requires exact responsibility and output.", "missing Light exact responsibility/output predicate"),
+    ("Light requires frozen contracts and inputs.", "missing Light frozen contracts/inputs predicate"),
+    ("Light requires a local, reversible blast radius.", "missing Light local/reversible predicate"),
+    ("Light requires no protected-risk trigger.", "missing Light protected-risk predicate"),
+    ("Light requires an objective oracle.", "missing Light objective-oracle predicate"),
+    ("Only search, extraction, classification, summarization, or mechanical transformation qualifies for Light; implementation and open-ended design do not.", "missing Light task-shape restriction"),
+    ("Failure of any Light predicate requires Standard or higher.", "missing Light failure result"),
 )
 
 
@@ -395,6 +410,8 @@ def _validate_model_routing(files: dict[str, str]) -> None:
     )
     policy = files["references/model-routing.md"]
     for _, value, reason in POLICY_SEMANTIC_REQUIREMENTS:
+        _require(policy, value, "references/model-routing.md", reason)
+    for value, reason in POLICY_ADDITIONAL_REQUIREMENTS:
         _require(policy, value, "references/model-routing.md", reason)
     for value, reason in requirements:
         _require(policy, value, "references/model-routing.md", reason)

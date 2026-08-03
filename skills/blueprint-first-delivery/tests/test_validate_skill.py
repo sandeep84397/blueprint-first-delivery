@@ -191,6 +191,105 @@ class ValidateSkillTests(unittest.TestCase):
                 finally:
                     path.write_text(original)
 
+    def test_xhigh_route_semantics_are_enforced(self):
+        path = self.skill / "references" / "model-routing.md"
+        original = path.read_text()
+        cases = (
+            (
+                "two-trigger alternative",
+                "Within Deep, xhigh requires two independent high-risk triggers",
+                "missing xhigh two-trigger alternative",
+            ),
+            (
+                "stable-fingerprint alternative",
+                "or an unresolved high-effort attempt with a stable root fingerprint.",
+                "missing xhigh stable-fingerprint alternative",
+            ),
+            (
+                "high-insufficient rationale",
+                "Routing review records why high is insufficient.",
+                "missing xhigh high-insufficient rationale",
+            ),
+            (
+                "no automatic Maximum",
+                "xhigh does not automatically select Maximum.",
+                "missing xhigh no-automatic-Maximum rule",
+            ),
+        )
+        for name, required, expected in cases:
+            with self.subTest(name=name):
+                self.assertIn(required, original)
+                path.write_text(original.replace(required, "removed", 1))
+                try:
+                    result = self.run_validator()
+                    self.assertEqual(1, result.returncode, result.stderr)
+                    self.assertIn(expected, result.stderr)
+                finally:
+                    path.write_text(original)
+
+    def test_parallel_dependency_semantics_are_enforced(self):
+        path = self.skill / "references" / "model-routing.md"
+        original = path.read_text()
+        cases = (
+            (
+                "completed-common-prerequisite allowance",
+                "Completed or common prerequisites do not block parallel work.",
+                "missing completed-prerequisite parallel allowance",
+            ),
+            (
+                "unfinished-member dependency block",
+                "Parallel is blocked only by a dependency on another parallel-group member's unfinished output,",
+                "missing unfinished-member parallel dependency block",
+            ),
+        )
+        for name, required, expected in cases:
+            with self.subTest(name=name):
+                self.assertIn(required, original)
+                path.write_text(original.replace(required, "removed", 1))
+                try:
+                    result = self.run_validator()
+                    self.assertEqual(1, result.returncode, result.stderr)
+                    self.assertIn(expected, result.stderr)
+                finally:
+                    path.write_text(original)
+
+    def test_light_predicates_and_standard_default_are_enforced(self):
+        path = self.skill / "references" / "model-routing.md"
+        original = path.read_text()
+        cases = (
+            ("exact responsibility/output", "Light requires exact responsibility and output.", "missing Light exact responsibility/output predicate"),
+            ("frozen contracts/inputs", "Light requires frozen contracts and inputs.", "missing Light frozen contracts/inputs predicate"),
+            ("local reversible blast radius", "Light requires a local, reversible blast radius.", "missing Light local/reversible predicate"),
+            ("no protected risks", "Light requires no protected-risk trigger.", "missing Light protected-risk predicate"),
+            ("objective oracle", "Light requires an objective oracle.", "missing Light objective-oracle predicate"),
+            ("eligible task shape", "Only search, extraction, classification, summarization, or mechanical transformation qualifies for Light; implementation and open-ended design do not.", "missing Light task-shape restriction"),
+            ("failed predicate result", "Failure of any Light predicate requires Standard or higher.", "missing Light failure result"),
+            ("Standard default", "Otherwise use Standard for normal bounded implementation.", "missing Standard default"),
+        )
+        for name, required, expected in cases:
+            with self.subTest(name=name):
+                self.assertIn(required, original)
+                path.write_text(original.replace(required, "removed", 1))
+                try:
+                    result = self.run_validator()
+                    self.assertEqual(1, result.returncode, result.stderr)
+                    self.assertIn(expected, result.stderr)
+                finally:
+                    path.write_text(original)
+
+        inverted = original.replace(
+            "Otherwise use Standard for normal bounded implementation.",
+            "Otherwise use Light for normal bounded implementation.",
+            1,
+        )
+        path.write_text(inverted)
+        try:
+            result = self.run_validator()
+            self.assertEqual(1, result.returncode, result.stderr)
+            self.assertIn("missing Standard default", result.stderr)
+        finally:
+            path.write_text(original)
+
     def test_every_model_routing_semantic_rule_is_enforced(self):
         module = self.load_validator_module()
         path = self.skill / "references" / "model-routing.md"
