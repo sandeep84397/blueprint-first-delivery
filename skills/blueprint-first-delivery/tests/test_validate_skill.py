@@ -13,6 +13,35 @@ from unittest import mock
 SKILL_ROOT = Path(__file__).resolve().parents[1]
 VALIDATOR = SKILL_ROOT / "scripts" / "validate_skill.py"
 REPO_ROOT = SKILL_ROOT.parents[1]
+ROUTING_SCENARIO_FILE = "tests/model-routing-pressure-scenarios.md"
+ROUTING_SCENARIO_ROWS = (
+    ("R01", "Exact extraction; every Light predicate passes", "Light"),
+    ("R02", "Bounded normal implementation; no protected risk", "Standard"),
+    ("R03", "Five-line authorization change", "Deep floor"),
+    ("R04", "Mechanical edit plus one concurrency trigger", "Direct Light-to-Deep floor"),
+    ("R05", "Light and Deep signals conflict", "Deep wins by precedence"),
+    ("R06", "Two independent high-risk triggers", "Deep/xhigh only after review evidence"),
+    ("R07", "Hardest indivisible critical problem after xhigh failure", "Maximum"),
+    ("R08", "No active hard trigger; decision and contracts frozen/reviewed; objective oracle exists; no critical finding", "Standard de-escalation allowed"),
+    ("R09", "Security trigger remains after design freeze", "Deep-to-Standard blocked"),
+    ("R10", "Two distinct hypotheses retain one criterion/oracle/signature/boundary fingerprint", "Repeated-failure Deep trigger"),
+    ("R11", "Contract, oracle, signature, or causal boundary changes materially", "Failure counter resets"),
+    ("R12", "Two files have a producer-consumer dependency", "Ordered"),
+    ("R13", "Independent chunks have frozen versioned contracts, exclusive ownership, tests, integration owner/order", "Parallel group allowed"),
+    ("R14", "Parallel candidates hide one dependency", "Parallel blocked"),
+    ("R15", "Parallel candidates overlap state ownership", "Parallel blocked"),
+    ("R16", "Parallel contract version is stale", "Parallel blocked"),
+    ("R17", "Parallel group lacks integration owner or order", "Parallel blocked"),
+    ("R18", "Requested model unavailable; declared same-tier fallback exists", "Same-tier fallback recorded"),
+    ("R19", "Same-tier unavailable; higher capable tier exists", "Promote and record fallback"),
+    ("R20", "Maximum model unavailable", "Block or decompose"),
+    ("R21", "Deep/Maximum route cannot be pinned and verified", "Start gate blocked"),
+    ("R22", "Verified claim lacks mapping version/digest, alias resolution, observed model/effort, source, or time", "Evidence rejected"),
+    ("R23", "Observed model or effort is below floor", "Mismatch; gate blocked"),
+    ("R24", "User requests below-floor override", "Override recorded; readiness blocked"),
+    ("R25", "Reviewer equals author or finding remains unresolved", "Review gate blocked"),
+    ("R26", "Unknown runtime or legacy blueprint resumes", "Recommendation-only; add reviewed schema before start"),
+)
 ROUTING_REQUIRED_FILES = (
     "references/model-routing.md",
     "references/runtime-mappings/codex.md",
@@ -101,6 +130,33 @@ class ValidateSkillTests(unittest.TestCase):
         result = self.run_validator()
         self.assertEqual(0, result.returncode, result.stderr)
         self.assertEqual("", result.stdout)
+
+    def test_model_routing_pressure_file_exists(self):
+        self.assertTrue((SKILL_ROOT / ROUTING_SCENARIO_FILE).is_file())
+
+    def test_model_routing_pressure_rows_are_exact(self):
+        text = (SKILL_ROOT / ROUTING_SCENARIO_FILE).read_text()
+        for scenario_id, pressure_case, expected_result in ROUTING_SCENARIO_ROWS:
+            row = f"| {scenario_id} | {pressure_case} | {expected_result} |"
+            with self.subTest(scenario_id=scenario_id):
+                self.assertIn(row, text)
+
+    def test_every_model_routing_pressure_oracle_is_enforced(self):
+        path = self.skill / ROUTING_SCENARIO_FILE
+        original = path.read_text()
+        for scenario_id, pressure_case, expected_result in ROUTING_SCENARIO_ROWS:
+            row = f"| {scenario_id} | {pressure_case} | {expected_result} |"
+            with self.subTest(scenario_id=scenario_id):
+                path.write_text(original.replace(row, f"| {scenario_id} | removed | removed |", 1))
+                try:
+                    result = self.run_validator()
+                    self.assertEqual(1, result.returncode, result.stderr)
+                    self.assertIn(
+                        f"routing pressure scenario mismatch: {scenario_id}",
+                        result.stderr,
+                    )
+                finally:
+                    path.write_text(original)
 
     def test_routing_contract_files_exist(self):
         for relative in ROUTING_REQUIRED_FILES:
