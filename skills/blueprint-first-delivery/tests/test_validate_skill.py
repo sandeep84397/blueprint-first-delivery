@@ -2,6 +2,7 @@ import importlib.util
 import json
 import os
 from pathlib import Path
+import re
 import shutil
 import subprocess
 import sys
@@ -1052,6 +1053,125 @@ class ValidateSkillTests(unittest.TestCase):
     def test_metadata_outside_fixture_is_isolated(self):
         fixture = (SKILL_ROOT / "tests" / "fixtures" / "metadata-outside-frontmatter.md").read_text()
         self.assertEqual("name: blueprint-first-delivery\n", fixture)
+
+    def test_cross_runtime_traceability_report_is_complete(self):
+        path = (
+            REPO_ROOT
+            / "docs"
+            / "superpowers"
+            / "reports"
+            / "2026-08-03-cross-runtime-model-routing-traceability.md"
+        )
+        text = path.read_text()
+        for required in (
+            "## Requirement evidence",
+            "## Validation",
+            "## Routing history",
+            "## Global mutation proof",
+            "## Final residual risk",
+            "Principal review: PASS",
+            "QA review: PASS",
+            "Global boundary verifier exit status: 0",
+            "Global boundary states equal: yes",
+            "External Claude Code execution: not run; not claimed",
+        ):
+            with self.subTest(required=required):
+                self.assertIn(required, text)
+        self.assertNotIn("PASS required", text)
+        self.assertNotIn("pending evidence", text)
+        self.assertIn(
+            "Package validation exit status: 0",
+            text,
+        )
+        self.assertIn("Git diff check exit status: 0", text)
+        self.assertIn("Standalone validator exit status: 0", text)
+        self.assertIn("Unit-test oracle: OK", text)
+        principal = re.search(
+            r"Principal review: PASS by ([A-Za-z0-9_.@/-]+) "
+            r"at commit ([0-9a-f]{40})",
+            text,
+        )
+        qa = re.search(
+            r"QA review: PASS by ([A-Za-z0-9_.@/-]+) "
+            r"at commit ([0-9a-f]{40})",
+            text,
+        )
+        reviewed = re.search(
+            r"Reviewed implementation commit: ([0-9a-f]{40})",
+            text,
+        )
+        self.assertIsNotNone(principal)
+        self.assertIsNotNone(qa)
+        self.assertIsNotNone(reviewed)
+        self.assertNotEqual(principal.group(1), qa.group(1))
+        self.assertEqual(principal.group(2), qa.group(2))
+        self.assertEqual(principal.group(2), reviewed.group(1))
+        count = re.search(r"Final test count: ([0-9]+)", text)
+        self.assertIsNotNone(count)
+        self.assertGreater(int(count.group(1)), 53)
+        for task_number in range(6):
+            self.assertIn(f"| Task {task_number} |", text)
+
+        rows = re.findall(
+            r"^\| (`/Users/sandeepdhami/[^|]+`) "
+            r"\| (`(?:[0-9a-f]{64}|absent)`) "
+            r"\| (`(?:[0-9a-f]{64}|absent)`) \| yes \|$",
+            text,
+            re.MULTILINE,
+        )
+        self.assertEqual(3, len(rows))
+        expected_paths = {
+            "`/Users/sandeepdhami/.claude/CLAUDE.md`",
+            "`/Users/sandeepdhami/.codex/AGENTS.md`",
+            "`/Users/sandeepdhami/.codex/config.toml`",
+        }
+        self.assertEqual(expected_paths, {path for path, _, _ in rows})
+        for _, before, after in rows:
+            self.assertEqual(before, after)
+
+        baseline_path = (
+            REPO_ROOT
+            / "docs"
+            / "superpowers"
+            / "reports"
+            / "2026-08-03-cross-runtime-model-routing-global-baseline.json"
+        )
+        baseline = json.loads(baseline_path.read_text())
+        expected_baseline = {
+            row["path"]: row["state"]
+            for row in baseline["paths"]
+        }
+        report_baseline = {
+            path.strip("`"): before.strip("`")
+            for path, before, _ in rows
+        }
+        self.assertEqual(expected_baseline, report_baseline)
+
+        anchor_path = (
+            REPO_ROOT
+            / "docs"
+            / "superpowers"
+            / "reports"
+            / "2026-08-03-cross-runtime-model-routing-global-baseline-anchor.json"
+        )
+        anchor = json.loads(anchor_path.read_text())
+        task0_anchor = re.search(
+            r"Task 0 anchor commit: ([0-9a-f]{40})",
+            text,
+        )
+        baseline_commit = re.search(
+            r"Baseline commit: ([0-9a-f]{40})",
+            text,
+        )
+        baseline_blob = re.search(
+            r"Baseline blob OID: ([0-9a-f]{40,64})",
+            text,
+        )
+        self.assertIsNotNone(task0_anchor)
+        self.assertIsNotNone(baseline_commit)
+        self.assertIsNotNone(baseline_blob)
+        self.assertEqual(anchor["baseline_commit"], baseline_commit.group(1))
+        self.assertEqual(anchor["baseline_blob_oid"], baseline_blob.group(1))
 
 
 if __name__ == "__main__":
