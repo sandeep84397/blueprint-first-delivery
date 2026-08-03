@@ -1,0 +1,18 @@
+{
+  "schema_version": 1,
+  "captured_before_task": "Task 1",
+  "paths": [
+    {
+      "path": "/Users/sandeepdhami/.claude/CLAUDE.md",
+      "state": "47b118b3aee9546c8d653fc24497c0c50d843fc586f687e5e3f34c99a6b16ef9"
+    },
+    {
+      "path": "/Users/sandeepdhami/.codex/AGENTS.md",
+      "state": "27ee2eb2afc8c5ac993c2c40b12f81f8e7a311756178b4875e21aab98b5ed150"
+    },
+    {
+      "path": "/Users/sandeepdhami/.codex/config.toml",
+      "state": "f194a1fa748abcc00930263426bb2e936f1a94283ae2bb1764d71549ca32efe0"
+    }
+  ]
+}
