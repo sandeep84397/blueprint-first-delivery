@@ -17,16 +17,49 @@ REQUIRED_FILES = (
     "SKILL.md",
     "agents/openai.yaml",
     "references/blueprint-templates.md",
+    "references/model-routing.md",
     "references/readiness-rubric.md",
     "references/review-and-gate-checklists.md",
+    "references/runtime-mappings/codex.md",
+    "references/runtime-mappings/claude-code.md",
     "scripts/validate_skill.py",
+    "scripts/verify_global_boundary.py",
     "tests/pressure-scenarios.md",
     "tests/baseline-no-skill.md",
     "tests/forward-test-with-skill.md",
+    "tests/test_verify_global_boundary.py",
     "tests/validate-skill.sh",
     "tests/test-validator-negative-fixtures.sh",
     "tests/test_validate_skill.py",
 )
+RUNTIME_MAPPING_FILES = (
+    "references/runtime-mappings/codex.md",
+    "references/runtime-mappings/claude-code.md",
+)
+NEUTRAL_ROUTING_FILES = (
+    "SKILL.md",
+    "references/model-routing.md",
+    "references/blueprint-templates.md",
+    "references/readiness-rubric.md",
+    "references/review-and-gate-checklists.md",
+)
+MAPPING_TIERS = ("Light", "Standard", "Deep", "Maximum")
+MAPPING_EFFORTS = {
+    "Light": "`low`",
+    "Standard": "`medium`",
+    "Deep": "`high`",
+    "Maximum": "`max`",
+}
+MAPPING_SECTIONS = (
+    "## Request mechanism",
+    "## Availability and supported effort",
+    "## Verification and fallback",
+    "## Digest",
+)
+FALLBACK_RELATION = re.compile(
+    r"^`([^`]+)`\s*/\s*`(low|medium|high|xhigh|max)`(?:\s+.*)?$"
+)
+EFFORT_RANK = {"low": 0, "medium": 1, "high": 2, "xhigh": 3, "max": 4}
 DESCRIPTION_RE = re.compile(r"Use when [A-Za-z0-9 ,.'()/+\-]+")
 NAME_RE = re.compile(r"[a-z0-9]+(?:-[a-z0-9]+)*")
 
@@ -193,6 +226,120 @@ def _require(text: str, value: str, relative: str, reason: str) -> None:
         raise PackageError(relative, 0, reason)
 
 
+def _parse_runtime_mapping(relative: str, text: str) -> dict[str, dict[str, str]]:
+    _require(text, "Mapping version: `1`", relative, "missing mapping version")
+    for section in MAPPING_SECTIONS:
+        _require(text, section, relative, f"missing mapping section: {section}")
+
+    rows = {}
+    for line in text.splitlines():
+        cells = [cell.strip() for cell in line.strip("|").split("|")]
+        if cells and cells[0] in MAPPING_TIERS:
+            if len(cells) != 5:
+                raise PackageError(relative, 0, "runtime mapping row must have five cells")
+            tier, model, effort, same_tier, higher = cells
+            if tier in rows:
+                raise PackageError(relative, 0, f"duplicate runtime mapping tier: {tier}")
+            if not model:
+                raise PackageError(relative, 0, f"missing model for {tier}")
+            if effort != MAPPING_EFFORTS[tier]:
+                raise PackageError(relative, 0, f"invalid effort for {tier}")
+            if not same_tier or not higher:
+                raise PackageError(relative, 0, "fallback cells must be non-empty")
+            if same_tier.casefold() != "none":
+                same_match = FALLBACK_RELATION.fullmatch(same_tier)
+                if (
+                    same_match is None
+                    or f"`{same_match.group(2)}`" != effort
+                ):
+                    raise PackageError(
+                        relative,
+                        0,
+                        f"invalid same-tier fallback for {tier}",
+                    )
+            if tier == "Maximum":
+                if not higher.casefold().startswith("blocked"):
+                    raise PackageError(relative, 0, "Maximum fallback must block")
+            elif FALLBACK_RELATION.fullmatch(higher) is None:
+                raise PackageError(
+                    relative,
+                    0,
+                    f"higher fallback must declare model and effort for {tier}",
+                )
+            rows[tier] = {
+                "model": model.strip("`"),
+                "effort": effort.strip("`"),
+                "same_tier": same_tier,
+                "higher": higher,
+            }
+    if tuple(rows) != MAPPING_TIERS:
+        raise PackageError(
+            relative,
+            0,
+            "runtime mapping tiers must be exactly Light, Standard, Deep, Maximum",
+        )
+    for tier_index, tier in enumerate(MAPPING_TIERS[:-1]):
+        higher_match = FALLBACK_RELATION.fullmatch(rows[tier]["higher"])
+        if higher_match is None:
+            raise AssertionError("higher fallback syntax validated above")
+        higher_model = higher_match.group(1).casefold()
+        higher_effort = higher_match.group(2)
+        later_models = {
+            rows[later_tier]["model"].casefold()
+            for later_tier in MAPPING_TIERS[tier_index + 1:]
+        }
+        current_model = rows[tier]["model"].casefold()
+        current_effort = rows[tier]["effort"]
+        targets_later_model = higher_model in later_models
+        same_model_effort_promotes = (
+            higher_model != current_model
+            or EFFORT_RANK[higher_effort] > EFFORT_RANK[current_effort]
+        )
+        if not targets_later_model or not same_model_effort_promotes:
+            raise PackageError(
+                relative,
+                0,
+                f"higher fallback must target a higher tier for {tier}",
+            )
+    return rows
+
+
+def _validate_model_routing(files: dict[str, str]) -> None:
+    mappings = {
+        relative: _parse_runtime_mapping(relative, files[relative])
+        for relative in RUNTIME_MAPPING_FILES
+    }
+    provider_models = {
+        row["model"].casefold()
+        for mapping in mappings.values()
+        for row in mapping.values()
+    }
+    for relative in NEUTRAL_ROUTING_FILES:
+        folded = files[relative].casefold()
+        for model in provider_models:
+            match = re.search(
+                rf"(?<![a-z0-9_.-]){re.escape(model)}(?![a-z0-9_.-])",
+                folded,
+            )
+            if match:
+                line = folded.count("\n", 0, match.start()) + 1
+                raise PackageError(
+                    relative,
+                    line,
+                    "provider model identifier outside runtime mappings",
+                )
+
+    requirements = (
+        ("## Evaluation order", "missing routing evaluation order"),
+        ("## Topology", "missing routing topology contract"),
+        ("below-floor override remains blocked", "missing below-floor override gate"),
+        ("## Compatibility", "missing routing compatibility contract"),
+    )
+    policy = files["references/model-routing.md"]
+    for value, reason in requirements:
+        _require(policy, value, "references/model-routing.md", reason)
+
+
 def _validate_rubric(text: str) -> None:
     for legacy in LEGACY_RUBRIC_ROWS:
         if f"| {legacy} |" in text:
@@ -281,6 +428,7 @@ def validate(root_argument: str) -> None:
     files = {relative: _read_text(root, relative) for relative in REQUIRED_FILES}
     _validate_skill_md(root, files["SKILL.md"])
     _validate_openai_yaml(files["agents/openai.yaml"])
+    _validate_model_routing(files)
 
     skill = files["SKILL.md"]
     templates = files["references/blueprint-templates.md"]

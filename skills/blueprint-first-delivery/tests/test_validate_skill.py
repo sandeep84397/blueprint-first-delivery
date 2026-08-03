@@ -13,6 +13,15 @@ from unittest import mock
 SKILL_ROOT = Path(__file__).resolve().parents[1]
 VALIDATOR = SKILL_ROOT / "scripts" / "validate_skill.py"
 REPO_ROOT = SKILL_ROOT.parents[1]
+ROUTING_REQUIRED_FILES = (
+    "references/model-routing.md",
+    "references/runtime-mappings/codex.md",
+    "references/runtime-mappings/claude-code.md",
+)
+NEW_PACKAGE_REQUIRED_FILES = ROUTING_REQUIRED_FILES + (
+    "scripts/verify_global_boundary.py",
+    "tests/test_verify_global_boundary.py",
+)
 EXPECTED_RUBRIC_ROWS = (
     ("Requirement clarity", 15, "Deduct 5 for missing problem/outcome; deduct 5 for ambiguous in/out scope or constraints; deduct 5 for missing affected modules."),
     ("Blueprint completeness", 15, "Deduct 3 each for missing architecture evidence, module responsibility/data flow, state ownership, failure/rollback path, or separate integration blueprint."),
@@ -48,6 +57,25 @@ class ValidateSkillTests(unittest.TestCase):
         self.assertEqual("", result.stdout)
         self.assertIn(expected, result.stderr)
 
+    @staticmethod
+    def replace_mapping_cell(text, tier, column, value):
+        lines = text.splitlines()
+        for index, line in enumerate(lines):
+            if line.startswith(f"| {tier} |"):
+                cells = line.split("|")
+                cells[column] = f" {value} "
+                lines[index] = "|".join(cells)
+                return "\n".join(lines) + "\n"
+        raise AssertionError(f"missing mapping tier: {tier}")
+
+    @staticmethod
+    def mapping_model(text, tier):
+        row = next(
+            line for line in text.splitlines()
+            if line.startswith(f"| {tier} |")
+        )
+        return row.split("|")[2].strip().strip("`")
+
     def load_validator_module(self):
         spec = importlib.util.spec_from_file_location("blueprint_skill_validator", VALIDATOR)
         module = importlib.util.module_from_spec(spec)
@@ -58,6 +86,141 @@ class ValidateSkillTests(unittest.TestCase):
         result = self.run_validator()
         self.assertEqual(0, result.returncode, result.stderr)
         self.assertEqual("", result.stdout)
+
+    def test_routing_contract_files_exist(self):
+        for relative in ROUTING_REQUIRED_FILES:
+            with self.subTest(relative=relative):
+                self.assertTrue((SKILL_ROOT / relative).is_file(), relative)
+
+    def test_runtime_mapping_structure_is_enforced(self):
+        for filename in ("codex.md", "claude-code.md"):
+            path = self.skill / "references" / "runtime-mappings" / filename
+            original = path.read_text()
+
+            with self.subTest(filename=filename, mutation="missing tier"):
+                path.write_text(original.replace("| Maximum |", "| Removed |", 1))
+                try:
+                    result = self.run_validator()
+                    self.assertEqual(1, result.returncode, result.stderr)
+                    self.assertIn(
+                        "runtime mapping tiers must be exactly",
+                        result.stderr,
+                    )
+                finally:
+                    path.write_text(original)
+
+            tiers = ("Light", "Standard", "Deep", "Maximum")
+            for tier_index, tier in enumerate(tiers):
+                wrong_same_effort = (
+                    "`alternate` / `low`"
+                    if tier == "Maximum"
+                    else "`alternate` / `max`"
+                )
+                cases = (
+                    ("empty model", 2, "", f"missing model for {tier}"),
+                    ("wrong effort", 3, "`invalid`", f"invalid effort for {tier}"),
+                    ("empty same-tier fallback", 4, "", "fallback cells must be non-empty"),
+                    ("empty higher fallback", 5, "", "fallback cells must be non-empty"),
+                    (
+                        "same-tier fallback effort mismatch",
+                        4,
+                        wrong_same_effort,
+                        f"invalid same-tier fallback for {tier}",
+                    ),
+                    (
+                        "invalid higher fallback",
+                        5,
+                        "Standard" if tier == "Maximum" else "none",
+                        (
+                            "Maximum fallback must block"
+                            if tier == "Maximum"
+                            else f"higher fallback must declare model and effort for {tier}"
+                        ),
+                    ),
+                )
+                if tier != "Maximum":
+                    source_tier = tier if tier_index == 0 else tiers[tier_index - 1]
+                    lower_or_current_model = self.mapping_model(original, source_tier)
+                    current_row = next(
+                        line for line in original.splitlines()
+                        if line.startswith(f"| {tier} |")
+                    )
+                    current_effort = current_row.split("|")[3].strip()
+                    cases += ((
+                        "higher fallback targets current or lower tier",
+                        5,
+                        f"`{lower_or_current_model}` / {current_effort}",
+                        f"higher fallback must target a higher tier for {tier}",
+                    ),)
+                for mutation, column, value, expected in cases:
+                    with self.subTest(
+                        filename=filename,
+                        tier=tier,
+                        mutation=mutation,
+                    ):
+                        path.write_text(
+                            self.replace_mapping_cell(original, tier, column, value)
+                        )
+                        try:
+                            result = self.run_validator()
+                            self.assertEqual(1, result.returncode, result.stderr)
+                            self.assertIn(expected, result.stderr)
+                        finally:
+                            path.write_text(original)
+
+            section_cases = (
+                ("Mapping version: `1`", "missing mapping version"),
+                ("## Request mechanism", "missing mapping section"),
+                ("## Availability and supported effort", "missing mapping section"),
+                ("## Verification and fallback", "missing mapping section"),
+                ("## Digest", "missing mapping section"),
+            )
+            for marker, expected in section_cases:
+                with self.subTest(filename=filename, marker=marker):
+                    path.write_text(original.replace(marker, "removed", 1))
+                    try:
+                        result = self.run_validator()
+                        self.assertEqual(1, result.returncode, result.stderr)
+                        self.assertIn(expected, result.stderr)
+                    finally:
+                        path.write_text(original)
+
+    def test_new_package_files_are_required(self):
+        for relative in NEW_PACKAGE_REQUIRED_FILES:
+            with self.subTest(relative=relative):
+                path = self.skill / relative
+                original = path.read_bytes()
+                path.unlink()
+                try:
+                    result = self.run_validator()
+                    self.assertEqual(1, result.returncode, result.stderr)
+                    self.assertIn(
+                        f"{relative}:0: missing required file",
+                        result.stderr,
+                    )
+                finally:
+                    path.write_bytes(original)
+
+    def test_provider_model_value_leaking_into_shared_policy_is_rejected(self):
+        mapping = (
+            self.skill / "references" / "runtime-mappings" / "codex.md"
+        ).read_text()
+        provider_model = self.mapping_model(mapping, "Standard")
+        path = self.skill / "references" / "model-routing.md"
+
+        def mutate():
+            path.write_text(
+                path.read_text() + f"\nSelected provider model: {provider_model}\n"
+            )
+
+        original = path.read_text()
+        try:
+            self.assert_invalid(
+                "provider model identifier outside runtime mappings",
+                mutate,
+            )
+        finally:
+            path.write_text(original)
 
     def test_skill_stays_under_500_words(self):
         skill = (SKILL_ROOT / "SKILL.md").read_text()
