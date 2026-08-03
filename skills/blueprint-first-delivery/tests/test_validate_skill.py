@@ -158,6 +158,55 @@ class ValidateSkillTests(unittest.TestCase):
                 finally:
                     path.write_text(original)
 
+    def test_model_routing_rejects_reported_light_and_deep_policy_escapes(self):
+        path = self.skill / "references" / "model-routing.md"
+        original = path.read_text()
+        cases = (
+            (
+                "Light task-shape escape",
+                "Only search, extraction, classification, summarization, or mechanical transformation qualifies for Light; implementation and open-ended design do not.",
+                "missing Light task-shape restriction",
+            ),
+            (
+                "Deep-floor inversion",
+                "A single protected-risk trigger establishes Deep.",
+                "A single protected-risk trigger establishes Standard.",
+                "missing Deep hard-risk floor",
+            ),
+        )
+        for case in cases:
+            with self.subTest(case=case[0]):
+                if len(case) == 3:
+                    _, old, expected = case
+                    mutated = original.replace(old, "", 1)
+                else:
+                    _, old, new, expected = case
+                    mutated = original.replace(old, new, 1)
+                self.assertNotEqual(original, mutated)
+                path.write_text(mutated)
+                try:
+                    result = self.run_validator()
+                    self.assertEqual(1, result.returncode, result.stderr)
+                    self.assertIn(expected, result.stderr)
+                finally:
+                    path.write_text(original)
+
+    def test_every_model_routing_semantic_rule_is_enforced(self):
+        module = self.load_validator_module()
+        path = self.skill / "references" / "model-routing.md"
+        original = path.read_text()
+        self.assertEqual(26, len(module.POLICY_SEMANTIC_REQUIREMENTS))
+        for scenario_id, required, expected in module.POLICY_SEMANTIC_REQUIREMENTS:
+            with self.subTest(scenario_id=scenario_id):
+                self.assertIn(required, original)
+                path.write_text(original.replace(required, "removed", 1))
+                try:
+                    result = self.run_validator()
+                    self.assertEqual(1, result.returncode, result.stderr)
+                    self.assertIn(expected, result.stderr)
+                finally:
+                    path.write_text(original)
+
     def test_routing_contract_files_exist(self):
         for relative in ROUTING_REQUIRED_FILES:
             with self.subTest(relative=relative):

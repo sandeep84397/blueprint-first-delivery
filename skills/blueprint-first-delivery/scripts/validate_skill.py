@@ -112,6 +112,34 @@ ROUTING_SCENARIO_ROWS = (
     ("R25", "Reviewer equals author or finding remains unresolved", "Review gate blocked"),
     ("R26", "Unknown runtime or legacy blueprint resumes", "Recommendation-only; add reviewed schema before start"),
 )
+POLICY_SEMANTIC_REQUIREMENTS = (
+    ("R01", "Establish a hard risk floor before selecting a tier.", "missing hard-floor precedence"),
+    ("R02", "Only search, extraction, classification, summarization, or mechanical transformation qualifies for Light; implementation and open-ended design do not.", "missing Light task-shape restriction"),
+    ("R03", "A single protected-risk trigger establishes Deep.", "missing Deep hard-risk floor"),
+    ("R04", "The effective transition is max(next tier, established floor).", "missing max tier-floor transition"),
+    ("R05", "Deep wins over Light whenever their signals conflict.", "missing Deep precedence"),
+    ("R06", "Deep/xhigh requires review evidence.", "missing Deep/xhigh review evidence"),
+    ("R07", "Evaluate Maximum only for the hardest indivisible critical problem after xhigh evidence is insufficient;", "missing Maximum gate"),
+    ("R08", "De-escalation requires no current hard trigger, frozen reviewed decisions/contracts, an objective oracle, and no critical finding;", "missing de-escalation conditions"),
+    ("R09", "a remaining security trigger blocks de-escalation.", "missing remaining-trigger de-escalation block"),
+    ("R10", "Count two failures only for two distinct tested hypotheses with the same fingerprint.", "missing repeated-failure fingerprint rule"),
+    ("R11", "Reset after a material contract, oracle, signature, or causal-boundary change.", "missing failure-counter reset rule"),
+    ("R12", "Ordered is mandatory for a producer-consumer dependency.", "missing producer-consumer ordering rule"),
+    ("R13", "Parallel requires a parallel group whose members record chunk IDs, dependencies, frozen current contract IDs/versions/references, exclusive file/state ownership, independent verification, integration owner, and integration order.", "missing relational parallel requirements"),
+    ("R14", "Parallel is blocked by any dependency,", "missing dependency parallel block"),
+    ("R15", "overlapping state ownership,", "missing ownership parallel block"),
+    ("R16", "stale contract version,", "missing stale-contract parallel block"),
+    ("R17", "or missing integration owner/order.", "missing integration-order parallel block"),
+    ("R18", "Try declared same-tier fallback, then a higher tier;", "missing fallback order"),
+    ("R19", "never downshift.", "missing no-downshift fallback rule"),
+    ("R20", "Maximum unavailable blocks or forces decomposition.", "missing Maximum-unavailable block"),
+    ("R21", "Deep/Maximum require verified observed model and effort meeting the floor; active-runtime execution evidence alone proves this.", "missing Deep/Maximum execution proof"),
+    ("R22", "mapping version/digest, alias resolution, observed model/effort, source, and time.", "missing execution-evidence fields"),
+    ("R23", "An observed model or effort below the floor blocks the start gate.", "missing below-floor observed-evidence block"),
+    ("R24", "A below-floor override remains blocked and readiness remains blocked.", "missing below-floor override block"),
+    ("R25", "Author and principal reviewer differ; unresolved findings block review.", "missing independent-review block"),
+    ("R26", "Unknown runtimes remain recommendation-only; legacy blueprints cannot resume implementation before schema review.", "missing legacy-or-unknown runtime rule"),
+)
 
 
 class PackageError(Exception):
@@ -366,6 +394,8 @@ def _validate_model_routing(files: dict[str, str]) -> None:
         ("## Compatibility", "missing routing compatibility contract"),
     )
     policy = files["references/model-routing.md"]
+    for _, value, reason in POLICY_SEMANTIC_REQUIREMENTS:
+        _require(policy, value, "references/model-routing.md", reason)
     for value, reason in requirements:
         _require(policy, value, "references/model-routing.md", reason)
 

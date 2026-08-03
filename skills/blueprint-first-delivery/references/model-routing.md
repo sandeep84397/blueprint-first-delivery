@@ -2,10 +2,12 @@
 
 ## Evaluation order
 
-1. Establish a hard risk floor. Architecture/public-contract change, security, privacy, authorization, concurrency, persistence, migration, data integrity, irreversible blast radius, unresolved critical ambiguity, cross-module causal reasoning, a wrong design assumption, or two evidence-backed failures on one stable root fingerprint establish Deep.
-2. Evaluate Maximum only for the hardest indivisible critical problem after xhigh evidence is insufficient.
-3. When no Deep/Maximum floor applies, use Light only when scope and output are exact, contracts are frozen, risk is local/reversible, no protected-risk trigger exists, and an objective oracle exists.
-4. Otherwise use Standard.
+1. Establish a hard risk floor before selecting a tier. Architecture/public-contract change, security, privacy, authorization, concurrency, persistence, migration, data integrity, irreversible blast radius, unresolved critical ambiguity, cross-module causal reasoning, a wrong design assumption, or two evidence-backed failures on one stable root fingerprint establish Deep. A single protected-risk trigger establishes Deep. Deep wins over Light whenever their signals conflict.
+2. Evaluate Maximum only for the hardest indivisible critical problem after xhigh evidence is insufficient; Deep/xhigh requires review evidence.
+3. When no Deep/Maximum floor applies, use Light only when scope and output are exact, contracts are frozen, risk is local/reversible, no protected-risk trigger exists, and an objective oracle exists. Only search, extraction, classification, summarization, or mechanical transformation qualifies for Light; implementation and open-ended design do not.
+4. Otherwise use Standard for normal bounded implementation.
+
+Ordered is mandatory for a producer-consumer dependency. Parallel requires a parallel group whose members record chunk IDs, dependencies, frozen current contract IDs/versions/references, exclusive file/state ownership, independent verification, integration owner, and integration order. Parallel is blocked by any dependency, overlapping state ownership, stale contract version, or missing integration owner/order. File count never proves independence.
 
 The effective transition is max(next tier, established floor). Cheapest capable means lowest tier allowed by this evidence, not cheapest model regardless of risk.
 
@@ -15,17 +17,17 @@ A root fingerprint records acceptance criterion, deterministic command/oracle, s
 
 ## Topology
 
-Ordered is the default. Parallel requires a parallel group whose members record chunk IDs, dependencies, frozen contract IDs/versions/references, exclusive file/state ownership, independent verification, integration owner, and integration order. File count never proves independence.
+Ordered is the default.
 
 ## Runtime resolution
 
-Load only the active runtime mapping. Record mapping path, version, SHA-256, requested model/effort, request mechanism, and observed execution metadata. Unknown runtimes remain recommendation-only.
+Load only the active runtime mapping. Record mapping path, version, SHA-256, requested model/effort, request mechanism, and observed execution metadata: mapping version/digest, alias resolution, observed model/effort, source, and time. Unknown runtimes remain recommendation-only; legacy blueprints cannot resume implementation before schema review.
 
-Deep/Maximum require verified observed model and effort meeting the floor. Light/Standard may use inherited/unverified execution only when no higher floor applies and must not claim enforced cost optimization. Try declared same-tier fallback, then a higher tier; Maximum unavailable blocks or forces decomposition.
+Deep/Maximum require verified observed model and effort meeting the floor; active-runtime execution evidence alone proves this. An observed model or effort below the floor blocks the start gate. Light/Standard may use inherited/unverified execution only when no higher floor applies and must not claim enforced cost optimization. Try declared same-tier fallback, then a higher tier; never downshift. Maximum unavailable blocks or forces decomposition.
 
 ## Review, override, and transitions
 
-Author and principal reviewer differ. Review catches under-routing, over-routing, false parallelism, unresolved findings, and false execution claims. A below-floor override remains blocked. De-escalation requires no current hard trigger, frozen reviewed decisions/contracts, an objective oracle, and no critical finding. Append every transition; never overwrite history.
+Author and principal reviewer differ; unresolved findings block review. Review catches under-routing, over-routing, false parallelism, unresolved findings, and false execution claims. A below-floor override remains blocked and readiness remains blocked. De-escalation requires no current hard trigger, frozen reviewed decisions/contracts, an objective oracle, and no critical finding; a remaining security trigger blocks de-escalation. Append every transition; never overwrite history.
 
 ## Compatibility
 
