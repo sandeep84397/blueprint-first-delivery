@@ -4,7 +4,7 @@
 
 ## What this project does
 
-Blueprint-First Delivery is a reusable workflow skill for Codex and Claude Code. It requires the AI to design a change in plain English before coding, obtain independent architecture review, split delivery into the smallest practical verifiable chunks, route each chunk to the cheapest capable model, and validate integration against the original requirement.
+Blueprint-First Delivery is a reusable workflow skill for Codex and Claude Code. It defines an observable outcome and evidence, reasons backward to prerequisites, checks forward feasibility against architecture, reconciles both views, then freezes modules before coding. It obtains independent architecture review, splits delivery into the smallest practical verifiable chunks, routes each chunk to the cheapest capable model, and validates integration against the original requirement.
 
 It is designed for features, refactors, migrations, and other multi-part changes where one large implementation pass would carry too much ambiguity and rework risk.
 
@@ -22,36 +22,49 @@ A large task may be only partly understood even when each local edit looks plaus
 
 Individually passing components can still fail when their contracts, state ownership, or integration order disagree. Self-reported “95% confidence” is not objective evidence.
 
+## Outcome-backward planning
+
+Outcome-backward planning starts with observable acceptance evidence, then works backward through the conditions required to produce it while checking that those conditions are feasible in the current architecture. It surfaces late constraints earlier; it does not predict every future issue. Dates are constraints, not outcomes. When ambiguity would change behavior, the workflow asks users to resolve it before modules are frozen; until then, modules stay provisional.
+
 ## How Blueprint-First Delivery solves it
 
-The workflow enforces seven stages:
+The workflow enforces ten stages:
 
-1. Plain-English module blueprint.
-2. Independent Principal Engineer review.
-3. Small single-responsibility chunks with explicit dependencies and ownership.
-4. Evidence-based Light, Standard, Deep, or Maximum model route.
-5. Per-chunk start and completion gates.
-6. Separate incremental integration blueprint and gate.
-7. Final requirement-to-evidence traceability.
+1. Outcome contract.
+2. Architecture evidence.
+3. Backward prerequisite analysis.
+4. Forward feasibility analysis.
+5. Reconciliation loop.
+6. Module-freeze gate.
+7. Chunk decomposition.
+8. Readiness scoring and model routing.
+9. Implementation and incremental integration.
+10. Outcome and requirement verification.
 
 ```text
-Requirement
-  → Plain-English blueprint
-  → Independent design review
+Observable outcome and acceptance evidence
+  → Current architecture evidence
+  → Backward prerequisites
+  → Forward feasibility
+  → Reconciliation and module freeze
   → Small evidence-ready chunks
   → Cheapest capable model per chunk
-  → Chunk verification
   → Incremental integration
-  → End-to-end traceability
+  → Outcome traceability
 ```
 
 ## Evidence, not confidence
 
-`>=95/100` measures collected readiness evidence. It is not a mathematical probability and does not guarantee defect-free software. The score records evidence for clarity, contracts, dependencies, testability, edge cases, independent review, and integration readiness.
+`>=95/100` measures collected readiness evidence. It is not a mathematical probability and does not guarantee defect-free software. The score records evidence for clarity, contracts, dependencies, testability, edge cases, independent review, and integration readiness. `BLOCKED` means readiness is unscorable, not a lower numeric score.
 
 ## What you get
 
 - Module blueprint.
+- Outcome-Backward Plan.
+- Blocker register.
+- Reconciliation history.
+- Module-freeze decision.
+- Residual-risk record.
 - Dependency graph.
 - Chunk blueprints.
 - Readiness scores and vetoes.
@@ -63,7 +76,7 @@ Requirement
 
 ## Example: Offline profile editing
 
-A broad offline profile-editing request first freezes source-of-truth, conflict, retry, and persistence decisions. The data flow and ownership are reviewed before code begins.
+A broad offline profile-editing request first resolves source-of-truth ambiguity, backward conditions, forward sync feasibility, and reconciliation before any module split. It then freezes source-of-truth, conflict, retry, and persistence decisions. The data flow and ownership are reviewed before code begins.
 
 The work then splits into bounded contracts, local persistence, UI state, sync worker, and integration chunks. Work runs in parallel only after frozen contracts and non-overlapping ownership prove independence.
 
@@ -125,7 +138,7 @@ Use $blueprint-first-delivery to plan this feature.
 Use $blueprint-first-delivery to assess readiness before implementation.
 ```
 
-Provide the product goal, constraints, known dependencies, and delivery deadline. The skill produces a scoped blueprint and readiness score with the evidence required to pass its gate.
+Provide the observable outcome, objective acceptance evidence, constraints, known dependencies, and delivery deadline. The deadline is a constraint; it is not the outcome.
 
 ## Repository layout
 
@@ -133,8 +146,10 @@ Provide the product goal, constraints, known dependencies, and delivery deadline
 skills/blueprint-first-delivery/
   SKILL.md                 # Skill instructions
   references/              # Templates, rubric, and checklists
+  references/outcome-backward-planning.md # Outcome-first planning guidance
   scripts/validate_skill.py # Dependency-free package validator
   tests/validate-skill.sh  # Package validation
+  tests/outcome-backward-pressure-scenarios.md # Planning pressure scenarios
 ```
 
 ## Validate
@@ -154,3 +169,4 @@ The repository validator requires CPython 3.9+ and POSIX `sh`. The core package-
 - Safe parallelism requires relational independence evidence.
 - Local validation cannot prove an external Claude Code execution occurred.
 - Global configuration cleanup remains a separate explicitly approved migration.
+- No interactive graph or viewer is included; that work belongs to the separate semantic-zoom documentation project.
