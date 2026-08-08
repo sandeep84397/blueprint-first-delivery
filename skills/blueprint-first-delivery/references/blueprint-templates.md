@@ -2,6 +2,51 @@
 
 Write every blueprint in plain English. Create one blueprint per module or bounded change area, plus the separate integration blueprint below.
 
+## Direct receipt template
+
+```yaml
+route: direct
+outcome: <observable behavior>
+owner: <one module/state owner>
+changed_scope: [<path or state>]
+oracle_id: <deterministic command or probe>
+result: <observed pass/fail>
+rollback: <reversal>
+```
+
+## Lite card template
+
+```yaml
+route: lite
+outcome: <observable behavior>
+boundary: <single bounded boundary>
+invariant: <must remain true>
+owner: <module/state owner>
+scope: <paths and exclusions>
+failure_rollback: <failure behavior and reversal>
+oracle_id: <deterministic command or probe>
+route_reason: <why not Direct and no Full trigger>
+agent_brain: <source-linked when handoff or multi-turn; otherwise not required>
+```
+
+## Full evidence manifest template
+
+Use `references/evidence-manifest.md` for the required fields and validate the final JSON manifest with `scripts/validate_evidence_manifest.py`.
+
+```yaml
+route: full
+state: ARCHITECTURE_APPROVED
+route_facts: <modules, state owners, hard triggers, handoff>
+baseline: <git ref, contract digests, owned paths, file hashes, evidence digest>
+proof_matrix: <requirement, invariant, owner, oracle, expected result, task, status, evidence>
+traceability: <requirement → invariant → task → oracle → evidence → integration>
+agent_brain: <required source references>
+integration:
+  required: true
+  early_vertical_proof: <first producer/consumer proof>
+  final_gate: <complete outcome proof>
+```
+
 ## Outcome-Backward Plan
 
 ### Observable outcome

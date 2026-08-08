@@ -179,6 +179,16 @@ ADAPTIVE_EVIDENCE_REQUIREMENTS = (
     ("references/evidence-manifest.md", "## Immutable baseline and drift", "missing immutable baseline contract"),
     ("references/evidence-manifest.md", "mark affected evidence `STALE`", "missing drift invalidation contract"),
     ("references/evidence-manifest.md", "## Agent Brain continuity", "missing Agent Brain continuity contract"),
+    ("references/blueprint-templates.md", "## Direct receipt template", "missing Direct receipt template"),
+    ("references/blueprint-templates.md", "## Lite card template", "missing Lite card template"),
+    ("references/blueprint-templates.md", "## Full evidence manifest template", "missing Full evidence manifest template"),
+    ("references/blueprint-templates.md", "early_vertical_proof:", "missing early vertical proof template"),
+    ("references/review-and-gate-checklists.md", "## Route gate", "missing route gate"),
+    ("references/review-and-gate-checklists.md", "## Architecture approval", "missing architecture approval gate"),
+    ("references/review-and-gate-checklists.md", "## Plan freeze", "missing plan freeze gate"),
+    ("references/review-and-gate-checklists.md", "## Task proof", "missing task proof gate"),
+    ("references/review-and-gate-checklists.md", "## Integration proof and delivery", "missing integration proof gate"),
+    ("references/readiness-rubric.md", "does not replace executable proof", "missing readiness-proof boundary"),
 )
 OUTCOME_BACKWARD_REFERENCE_REQUIREMENTS = (
     ("references/outcome-backward-planning.md", "## Outcome contract", "missing observable-outcome contract"),

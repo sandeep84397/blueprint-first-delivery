@@ -1,5 +1,39 @@
 # Review and gate checklists
 
+## Route gate
+
+- Record facts, failed Direct predicates, and any Full hard trigger before choosing process depth.
+- Direct passes only when every predicate has observed evidence; otherwise route Lite or Full.
+- Lite has no Full trigger and contains its card and deterministic oracle.
+- Full has at least one named hard trigger. Do not use a readiness score to down-route it.
+
+## Architecture approval
+
+- Full outcome contract, current architecture evidence, contracts/state owners, risks, and backward/forward reconciliation are complete.
+- Independent reviewer has challenged low-level platform/API constraints, boundaries, recovery, concurrency, and external behavior where relevant.
+- Critical claims have an owner, named executable oracle, expected result, and baseline reference; unresolved critical assumptions block approval.
+- Result: `ARCHITECTURE_APPROVED` or `BLOCKED`.
+
+## Plan freeze
+
+- Modules are frozen only after reconciliation and architecture approval.
+- Every critical row maps requirement → contract/invariant → task → oracle → expected evidence → integration counterpart.
+- Immutable baseline records git reference, contract/version digests, owned paths, files, and evidence digest.
+- Integration owner, order, and early vertical proof are assigned. Result: `PLAN_FROZEN` or `BLOCKED`.
+
+## Task proof
+
+- Implementation remains inside frozen ownership and contract boundaries, or the manifest is marked `STALE` before rework.
+- Focused test/probe executes the named oracle and records observed result against the baseline.
+- Blueprint-to-code review verifies no unexplained deviation. Every implemented critical row is `PROVEN`.
+- Result: `TASK_PROVEN` or `BLOCKED`/`STALE`.
+
+## Integration proof and delivery
+
+- Run early vertical proof after the first compatible producer/consumer pair; do not defer cross-boundary proof to the final milestone.
+- Final integration executes the complete flow, real contracts/effects, recovery path, and applicable regression checks.
+- Delivery traceability is complete and all critical rows are `PROVEN`. Result: `INTEGRATION_PROVEN`, then `DELIVERY_READY`, or `BLOCKED`/`STALE`.
+
 ## Outcome-backward planning gate
 
 - Stable observable outcome and objective acceptance evidence are recorded.
