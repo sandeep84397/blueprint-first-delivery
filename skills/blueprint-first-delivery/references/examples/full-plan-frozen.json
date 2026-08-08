@@ -1,0 +1,59 @@
+{
+  "schema_version": 1,
+  "task_id": "profile-save",
+  "route": "full",
+  "state": "PLAN_FROZEN",
+  "route_facts": {
+    "modules": 2,
+    "state_owners": 2,
+    "handoff": true,
+    "protected_risks": [
+      "persistence"
+    ]
+  },
+  "baseline": {
+    "git_ref": "example-full-baseline",
+    "contract_digests": [
+      "profile-repository-v1"
+    ],
+    "owned_paths": [],
+    "files": [],
+    "evidence_digest": "0000000000000000000000000000000000000000000000000000000000000000"
+  },
+  "proof_matrix": [
+    {
+      "requirement_id": "AC-1",
+      "claim_id": "INV-ATOMIC-SAVE",
+      "criticality": "critical",
+      "owner": "repository",
+      "status": "PROOF_REQUIRED",
+      "task_id": "repository-save",
+      "oracle_id": "test_atomic_save",
+      "expected_result": "Save is atomic",
+      "evidence_ref": "tests/test_repository.py::test_atomic_save",
+      "baseline_ref": "baseline",
+      "integration_counterpart": "profile-presenter"
+    }
+  ],
+  "traceability": [
+    {
+      "requirement_id": "AC-1",
+      "claim_id": "INV-ATOMIC-SAVE",
+      "task_id": "repository-save",
+      "oracle_id": "test_atomic_save",
+      "evidence_ref": "tests/test_repository.py::test_atomic_save",
+      "integration_result": "pending"
+    }
+  ],
+  "agent_brain": {
+    "required": true,
+    "source_refs": [
+      "docs/blueprints/profile.md#INV-ATOMIC-SAVE"
+    ]
+  },
+  "integration": {
+    "required": true,
+    "early_vertical_proof": "IT-profile-save",
+    "final_gate": "pending"
+  }
+}

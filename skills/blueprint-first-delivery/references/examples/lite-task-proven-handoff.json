@@ -1,0 +1,39 @@
+{
+  "schema_version": 1,
+  "task_id": "bounded-change",
+  "route": "lite",
+  "state": "TASK_PROVEN",
+  "route_facts": {
+    "modules": 1,
+    "state_owners": 1,
+    "handoff": true
+  },
+  "baseline": {
+    "git_ref": "example-lite-baseline",
+    "contract_digests": [
+      "presenter-v1"
+    ],
+    "owned_paths": [],
+    "files": [],
+    "evidence_digest": "0000000000000000000000000000000000000000000000000000000000000000"
+  },
+  "lite_card": {
+    "outcome": "Update one bounded presenter behavior",
+    "boundary": "presenter-local",
+    "invariant": "Invalid values remain rejected",
+    "owner": "presenter",
+    "scope": "One bounded behavior",
+    "failure_rollback": "Preserve prior behavior on validation failure",
+    "oracle_id": "test_presenter",
+    "ownership": [
+      "src/presenter.py"
+    ],
+    "route_reason": "No protected risk; Direct lacks an existing oracle"
+  },
+  "agent_brain": {
+    "required": true,
+    "source_refs": [
+      "docs/blueprints/presenter.md#INV-1"
+    ]
+  }
+}
