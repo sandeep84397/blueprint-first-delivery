@@ -44,6 +44,7 @@ ROUTING_SCENARIO_ROWS = (
     ("R26", "Unknown runtime or legacy blueprint resumes", "Recommendation-only; add reviewed schema before start"),
 )
 OUTCOME_BACKWARD_SCENARIO_FILE = "tests/outcome-backward-pressure-scenarios.md"
+ADAPTIVE_EVIDENCE_SCENARIO_FILE = "tests/adaptive-evidence-pressure-scenarios.md"
 OUTCOME_BACKWARD_SCENARIO_ROWS = (
     ("OB01", "A completion date is offered without an observable end state", "Block; ask for outcome and acceptance evidence"),
     ("OB02", "Architecture evidence cannot prove a required contract", "Module freeze blocked; readiness unscorable"),
@@ -54,6 +55,18 @@ OUTCOME_BACKWARD_SCENARIO_ROWS = (
     ("OB07", "Proposed modules exist before reconciliation passes", "Modules provisional; no chunking or scoring"),
     ("OB08", "Outcome-backward gate passes with independent review", "Freeze modules; then chunk and route work"),
 )
+ADAPTIVE_EVIDENCE_SCENARIO_ROWS = (
+    ("AE01", "Exact one-owner reversible change with deterministic oracle and no handoff", "Direct"),
+    ("AE02", "Bounded implementation with one owner and no Full trigger", "Lite"),
+    ("AE03", "Unknown external API behavior or unresolved external dependency", "Full"),
+    ("AE04", "Persistence, migration, recovery, deletion, or integrity risk", "Full"),
+    ("AE05", "Two modules or state owners on one causal path", "Full"),
+    ("AE06", "Critical contract has prose but no named executable oracle", "Approval blocked"),
+    ("AE07", "Baseline contract, owned file, or evidence digest changes", "Evidence STALE; re-approval required"),
+    ("AE08", "Full work has Agent Brain summary without source references", "Gate blocked"),
+    ("AE09", "Integration is deferred until the final milestone", "Early vertical proof required"),
+    ("AE10", "Lite handoff lacks source-linked Agent Brain", "Gate blocked"),
+)
 ROUTING_REQUIRED_FILES = (
     "references/model-routing.md",
     "references/runtime-mappings/codex.md",
@@ -62,6 +75,33 @@ ROUTING_REQUIRED_FILES = (
 NEW_PACKAGE_REQUIRED_FILES = ROUTING_REQUIRED_FILES + (
     "scripts/verify_global_boundary.py",
     "tests/test_verify_global_boundary.py",
+    "references/adaptive-evidence-first.md",
+    "references/evidence-manifest.md",
+    "scripts/validate_evidence_manifest.py",
+    "tests/test_validate_evidence_manifest.py",
+    ADAPTIVE_EVIDENCE_SCENARIO_FILE,
+    "references/examples/direct-task-proven.json",
+    "references/examples/lite-task-proven-handoff.json",
+    "references/examples/full-plan-frozen.json",
+)
+ADAPTIVE_EVIDENCE_WORKFLOW_REQUIREMENTS = (
+    ("SKILL.md", "Route before choosing blueprint depth.", "missing adaptive route gate"),
+    ("SKILL.md", "Direct requires every Direct predicate", "missing Direct all-predicates gate"),
+    ("SKILL.md", "Full is mandatory", "missing Full hard-trigger gate"),
+    ("SKILL.md", "Executable proof is required", "missing executable-proof gate"),
+    ("SKILL.md", "Use source-linked Agent Brain for a handoff", "missing Lite source-linked Agent Brain gate"),
+    ("SKILL.md", "Full work requires source-linked Agent Brain.", "missing Full source-linked Agent Brain gate"),
+    ("references/adaptive-evidence-first.md", "## Deterministic route", "missing deterministic route contract"),
+    ("references/adaptive-evidence-first.md", "### Direct: every predicate must pass", "missing Direct predicate contract"),
+    ("references/adaptive-evidence-first.md", "### Full: any hard trigger is sufficient", "missing Full trigger contract"),
+    ("references/adaptive-evidence-first.md", "Outcome-backward and forward reconciliation runs only for Full.", "missing Full-only reconciliation rule"),
+    ("references/adaptive-evidence-first.md", "## Approval states", "missing distinct approval states"),
+    ("references/adaptive-evidence-first.md", "early vertical proof", "missing early integration proof"),
+    ("references/evidence-manifest.md", "## Proof matrix", "missing proof matrix contract"),
+    ("references/evidence-manifest.md", "`ASSUMPTION`, `BLOCKED`, or `STALE`", "missing critical proof state veto"),
+    ("references/evidence-manifest.md", "## Immutable baseline and drift", "missing immutable baseline contract"),
+    ("references/evidence-manifest.md", "mark affected evidence `STALE`", "missing drift invalidation contract"),
+    ("references/evidence-manifest.md", "## Agent Brain continuity", "missing Agent Brain continuity contract"),
 )
 ROUTE_WORKFLOW_REQUIREMENTS = (
     ("SKILL.md", "cheapest capable tier", "missing cheapest-capable routing rule"),
@@ -79,9 +119,9 @@ ROUTE_WORKFLOW_REQUIREMENTS = (
     ("references/review-and-gate-checklists.md", "observed model and effort", "missing observed route evidence"),
 )
 OUTCOME_BACKWARD_WORKFLOW_REQUIREMENTS = (
-    ("SKILL.md", "1. Define the outcome contract", "missing outcome-contract stage"),
-    ("SKILL.md", "Backward and forward analysis must reconcile before modules are frozen.", "missing convergence-before-freeze gate"),
-    ("SKILL.md", "Outcome-backward gate =", "missing blocked outcome-backward field"),
+    ("SKILL.md", "**Full** — define the outcome contract", "missing outcome-contract stage"),
+    ("SKILL.md", "Run outcome-backward and forward reconciliation", "missing convergence-before-freeze gate"),
+    ("SKILL.md", "Architecture / plan:", "missing blocked outcome-backward field"),
     ("references/blueprint-templates.md", "## Outcome-Backward Plan", "missing outcome-backward template"),
     ("references/blueprint-templates.md", "### Reconciliation history", "missing reconciliation-history template"),
     ("references/review-and-gate-checklists.md", "## Outcome-backward planning gate", "missing outcome-backward review gate"),
@@ -121,14 +161,13 @@ OUTCOME_BACKWARD_RECONCILIATION_FIELDS = (
     "Module-freeze impact",
 )
 OUTCOME_BACKWARD_WORKFLOW = (
-    "1. Define the outcome contract: actor, observable end state, exclusions, and objective acceptance evidence. A date or proposed implementation is a constraint, not an outcome. Record a user-owned ambiguity and wait.",
-    "2. Explore the existing architecture. Record architecture evidence: locations/symbols, conventions, dependencies/contracts/state owners, test/build entrypoints, unresolved questions, or literal status `greenfield` evidence. Do not score an existing-codebase blueprint without it.",
-    "3. Run the backward prerequisite pass and forward feasibility pass using references/outcome-backward-planning.md. Backward and forward analysis must reconcile before modules are frozen. Record rerun reason, preserved and invalidated findings, owner, scope, and count. The same unresolved trigger hard-blocks; no third analysis pass.",
-    "4. Request principal-engineer-style adversarial review. Reviewer must not author the scored blueprint. PASS freezes modules; BLOCKED keeps readiness unscorable.",
-    "5. Only after PASS, split frozen modules into the smallest single-responsibility chunks. Classify independent, ordered, or integration-only. Apply the model routing policy and select the cheapest capable tier.",
-    "6. Apply the readiness rubric. Overall and each chunk need >= 95/100 readiness. Any critical risk vetoes implementation.",
-    "7. Implement in dependency order. Before each chunk, satisfy its chunk gate. Incrementally integrate compatible chunks; execute the separate integration blueprint. Unit tests alone never satisfy integration.",
-    "8. Publish a traceability report: outcome criterion → acceptance evidence → backward condition → prerequisite/blocker → forward transition → reconciliation decision → module → chunk → evidence → integration result → status/residual risk.",
+    "3. **Full** — define the outcome contract: actor, observable end state, exclusions, and objective acceptance evidence. A date or proposed implementation is a constraint, not an outcome. Record user-owned ambiguity and wait.",
+    "4. Explore existing architecture. Record architecture evidence: locations/symbols, conventions, dependencies/contracts/state owners, test/build entrypoints, unresolved questions, or literal status `greenfield` evidence. Do not score an existing-codebase blueprint without it.",
+    "5. Run outcome-backward and forward reconciliation using `references/outcome-backward-planning.md`. Modules remain provisional until independent review passes the module-freeze gate. Full work requires source-linked Agent Brain.",
+    "6. Freeze the proof matrix, traceability chain, immutable baseline, and separate integration plan using `references/evidence-manifest.md`. Executable proof is required for every critical contract, invariant, or claim; prose and readiness points do not substitute for an oracle.",
+    "7. Request principal-engineer-style adversarial review. Reviewer must not author the scored blueprint. Keep user-facing state explicit: `ARCHITECTURE_APPROVED`, `PLAN_FROZEN`, `TASK_PROVEN`, `INTEGRATION_PROVEN`, or `DELIVERY_READY`.",
+    "8. Only after `PLAN_FROZEN`, split modules into smallest single-responsibility chunks. Implement in dependency order. Before each chunk, satisfy its gate; early vertical proof follows the first compatible producer/consumer pair. Unit tests alone never satisfy integration.",
+    "9. Publish traceability: outcome criterion → requirement → contract/invariant → task → oracle → evidence → integration result → residual risk. Baseline drift marks affected evidence `STALE` and requires re-approval.",
 )
 EXPECTED_RUBRIC_ROWS = (
     ("Requirement clarity", 15, "Deduct 5 for missing problem/outcome; deduct 5 for ambiguous in/out scope or constraints; deduct 5 for missing affected modules."),
@@ -214,6 +253,48 @@ class ValidateSkillTests(unittest.TestCase):
             row = f"| {scenario_id} | {pressure_case} | {expected_result} |"
             with self.subTest(scenario_id=scenario_id):
                 self.assertIn(row, text)
+
+    def test_adaptive_evidence_contract_files_exist(self):
+        for relative in NEW_PACKAGE_REQUIRED_FILES:
+            with self.subTest(relative=relative):
+                self.assertTrue((SKILL_ROOT / relative).is_file(), relative)
+
+    def test_adaptive_evidence_pressure_rows_are_exact(self):
+        text = (SKILL_ROOT / ADAPTIVE_EVIDENCE_SCENARIO_FILE).read_text()
+        for scenario_id, pressure_case, expected_result in ADAPTIVE_EVIDENCE_SCENARIO_ROWS:
+            row = f"| {scenario_id} | {pressure_case} | {expected_result} |"
+            with self.subTest(scenario_id=scenario_id):
+                self.assertIn(row, text)
+
+    def test_every_adaptive_evidence_pressure_oracle_is_enforced(self):
+        path = self.skill / ADAPTIVE_EVIDENCE_SCENARIO_FILE
+        original = path.read_text()
+        for scenario_id, pressure_case, expected_result in ADAPTIVE_EVIDENCE_SCENARIO_ROWS:
+            row = f"| {scenario_id} | {pressure_case} | {expected_result} |"
+            with self.subTest(scenario_id=scenario_id):
+                path.write_text(original.replace(row, f"| {scenario_id} | removed | removed |", 1))
+                try:
+                    result = self.run_validator()
+                    self.assertEqual(1, result.returncode, result.stderr)
+                    self.assertIn(
+                        f"adaptive-evidence pressure scenario mismatch: {scenario_id}",
+                        result.stderr,
+                    )
+                finally:
+                    path.write_text(original)
+
+    def test_every_adaptive_evidence_requirement_is_enforced(self):
+        for relative, required, expected in ADAPTIVE_EVIDENCE_WORKFLOW_REQUIREMENTS:
+            with self.subTest(relative=relative, required=required):
+                path = self.skill / relative
+                original = path.read_text()
+                path.write_text(original.replace(required, "removed", 1))
+                try:
+                    result = self.run_validator()
+                    self.assertEqual(1, result.returncode, result.stderr)
+                    self.assertIn(expected, result.stderr)
+                finally:
+                    path.write_text(original)
 
     def test_every_model_routing_pressure_oracle_is_enforced(self):
         path = self.skill / ROUTING_SCENARIO_FILE
@@ -772,11 +853,11 @@ class ValidateSkillTests(unittest.TestCase):
 
         def mutate():
             text = path.read_text()
-            marker = "2. Explore the existing architecture"
+            marker = "4. Explore existing architecture"
             if marker in text:
                 start = text.index(marker)
-                end = text.index("\n3. ", start)
-                text = text[:start] + "2. Define scope and modules.\n" + text[end + 1 :]
+                end = text.index("\n5. ", start)
+                text = text[:start] + "4. Define scope and modules.\n" + text[end + 1 :]
             path.write_text(text)
 
         self.assert_invalid("SKILL.md:0: missing architecture exploration requirement", mutate)
@@ -795,22 +876,13 @@ class ValidateSkillTests(unittest.TestCase):
         for field in (
             "## Blocked gate report",
             "Status / pre-code block:",
-            "Architecture evidence:",
-            "Independent review:",
-            "Readiness / veto:",
+            "Route / trigger:",
+            "Architecture / plan:",
+            "Proof / baseline:",
             "Ownership / ordering:",
-            "Chunk gates:",
-            "Integration gate:",
+            "Chunk / integration gates:",
             "Traceability:",
-            "principal-engineer-style reviewer =",
-            "distinct from author =",
-            "overall score =",
-            "every chunk score =",
-            "threshold for both = >=95/100",
-            "start gate =",
-            "completion gate =",
-            "separate blueprint =",
-            "separate gate =",
+            "Model route:",
         ):
             with self.subTest(field=field):
                 self.assertIn(field, skill)
@@ -818,9 +890,9 @@ class ValidateSkillTests(unittest.TestCase):
     def test_core_workflow_removals_are_rejected(self):
         cases = (
             ("SKILL.md", "principal-engineer-style adversarial review", "missing independent adversarial review"),
-            ("SKILL.md", "Before each chunk, satisfy its chunk gate", "missing per-chunk gate requirement"),
-            ("SKILL.md", "execute the separate integration blueprint", "missing separate integration workflow"),
-            ("SKILL.md", "Publish a traceability report", "missing final traceability requirement"),
+            ("SKILL.md", "Before each chunk, satisfy its gate", "missing per-chunk gate requirement"),
+            ("SKILL.md", "early vertical proof follows the first compatible", "missing separate integration workflow"),
+            ("SKILL.md", "Publish traceability:", "missing final traceability requirement"),
             ("SKILL.md", "Pressure rules:", "missing pressure-resistance rules"),
             ("tests/pressure-scenarios.md", "## Premature coding", "missing premature-coding pressure scenario"),
         )

@@ -5,34 +5,36 @@ description: Use when a feature, refactor, or multi-part change needs a delivery
 
 # Blueprint-first delivery
 
-1. Define the outcome contract: actor, observable end state, exclusions, and objective acceptance evidence. A date or proposed implementation is a constraint, not an outcome. Record a user-owned ambiguity and wait.
-2. Explore the existing architecture. Record architecture evidence: locations/symbols, conventions, dependencies/contracts/state owners, test/build entrypoints, unresolved questions, or literal status `greenfield` evidence. Do not score an existing-codebase blueprint without it.
-3. Run the backward prerequisite pass and forward feasibility pass using references/outcome-backward-planning.md. Backward and forward analysis must reconcile before modules are frozen. Record rerun reason, preserved and invalidated findings, owner, scope, and count. The same unresolved trigger hard-blocks; no third analysis pass.
-4. Request principal-engineer-style adversarial review. Reviewer must not author the scored blueprint. PASS freezes modules; BLOCKED keeps readiness unscorable.
-5. Only after PASS, split frozen modules into the smallest single-responsibility chunks. Classify independent, ordered, or integration-only. Apply the model routing policy and select the cheapest capable tier.
-6. Apply the readiness rubric. Overall and each chunk need >= 95/100 readiness. Any critical risk vetoes implementation.
-7. Implement in dependency order. Before each chunk, satisfy its chunk gate. Incrementally integrate compatible chunks; execute the separate integration blueprint. Unit tests alone never satisfy integration.
-8. Publish a traceability report: outcome criterion → acceptance evidence → backward condition → prerequisite/blocker → forward transition → reconciliation decision → module → chunk → evidence → integration result → status/residual risk.
+Route before choosing blueprint depth. Use `Direct`, `Lite`, or `Full` from `references/adaptive-evidence-first.md`; route is process depth, separate from model tier. Direct requires every Direct predicate. Full is mandatory when any hard trigger applies. Do not average, waive, or compensate for a failed predicate.
 
-Routing: Load only the active runtime mapping. Record floor, topology, dependencies, digest, review, override, and observed execution. A below-floor override remains blocked. Parallel requires frozen contracts and non-overlapping file/state ownership. Readiness is process evidence, not a mathematical probability of correctness or reliability.
+1. **Direct** — record a receipt: outcome, one owner, bounded changed scope, deterministic oracle/result, and rollback. No blueprint or Agent Brain unless handoff.
+2. **Lite** — record the Lite card: outcome, boundary, invariant, owner, scope, failure/rollback, oracle, and route reason. Use source-linked Agent Brain for a handoff or multi-turn work.
+3. **Full** — define the outcome contract: actor, observable end state, exclusions, and objective acceptance evidence. A date or proposed implementation is a constraint, not an outcome. Record user-owned ambiguity and wait.
+4. Explore existing architecture. Record architecture evidence: locations/symbols, conventions, dependencies/contracts/state owners, test/build entrypoints, unresolved questions, or literal status `greenfield` evidence. Do not score an existing-codebase blueprint without it.
+5. Run outcome-backward and forward reconciliation using `references/outcome-backward-planning.md`. Modules remain provisional until independent review passes the module-freeze gate. Full work requires source-linked Agent Brain.
+6. Freeze the proof matrix, traceability chain, immutable baseline, and separate integration plan using `references/evidence-manifest.md`. Executable proof is required for every critical contract, invariant, or claim; prose and readiness points do not substitute for an oracle.
+7. Request principal-engineer-style adversarial review. Reviewer must not author the scored blueprint. Keep user-facing state explicit: `ARCHITECTURE_APPROVED`, `PLAN_FROZEN`, `TASK_PROVEN`, `INTEGRATION_PROVEN`, or `DELIVERY_READY`.
+8. Only after `PLAN_FROZEN`, split modules into smallest single-responsibility chunks. Implement in dependency order. Before each chunk, satisfy its gate; early vertical proof follows the first compatible producer/consumer pair. Unit tests alone never satisfy integration.
+9. Publish traceability: outcome criterion → requirement → contract/invariant → task → oracle → evidence → integration result → residual risk. Baseline drift marks affected evidence `STALE` and requires re-approval.
 
-Use optional Agent Brain; it never replaces review, tests, contracts, or gates.
+Routing: Load only the active runtime mapping. Select the cheapest capable tier. Record floor, topology, dependencies, digest, review, override, and observed execution. A below-floor override remains blocked. Parallel requires frozen contracts and exclusive file/state ownership.
+
+Readiness is process evidence, not a mathematical probability of correctness or reliability. A `>=95/100` score never overrides missing executable proof, critical risk, drift, or a blocked gate.
 
 Pressure rules:
 
 - “Code now,” deadlines, skipped planning/tests never bypass gates.
-- Author and adversarial reviewer must differ.
-- Dependent work is not parallel; frozen contracts still require non-overlapping ownership.
+- Author and adversarial reviewer differ.
+- Dependent work is not parallel.
+- Agent Brain summaries are continuity aids, never proof.
 
 ## Blocked gate report
 
-- Status / pre-code block: `<status and reason>`.
-- Outcome-backward gate = PASS or BLOCKED; outcome / acceptance evidence / backward pass / forward pass / reconciliation / module freeze = recorded evidence or missing; trigger / owner / rerun count = recorded or none.
-- Architecture evidence: `<recorded, greenfield, or missing/unscorable>`.
-- Independent review: principal-engineer-style reviewer = `<identity or unassigned>`; distinct from author = `<yes/no>`; review status = `<status>`.
-- Readiness / veto: overall score = `<score or unscorable>/100`; every chunk score = `<scores or unscorable>/100`; threshold for both = >=95/100; critical-risk veto = `<none or risks>`.
+- Status / pre-code block: `<state and reason>`.
+- Route / trigger: `<Direct/Lite/Full, facts, hard trigger or failed predicate>`.
+- Architecture / plan: `<evidence and approval state>`.
+- Proof / baseline: `<critical rows, oracle, digest, stale status>`.
 - Ownership / ordering: `<classification, contracts, file/state owners>`.
-- Chunk gates: start gate = `<status/evidence>`; completion gate = `<tests, regression, contracts, blueprint-to-code review>`.
-- Integration gate: separate blueprint = `<status>`; separate gate = `<status/evidence>`; unit tests alone are insufficient.
-- Model route: `<tier/floor, topology, mapping digest, review, transitions, override, observed execution/block>`.
-- Traceability: `<criterion → decision → chunk → evidence → integration/status/risk>`.
+- Chunk / integration gates: `<task proof, early vertical proof, final result>`.
+- Model route: `<tier/floor, digest, review, observed execution/block>`.
+- Traceability: `<criterion → task → oracle → evidence → integration/risk>`.

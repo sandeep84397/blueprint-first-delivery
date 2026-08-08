@@ -32,7 +32,7 @@ PASS requires stable outcome evidence, sufficient architecture evidence, converg
 
 ## Analysis depth
 
-Use a compact artifact only for one local, objectively testable behavior with sufficient architecture evidence, one module, no public contract, state, persistence, security, concurrency, migration, or external dependency change, and a proven integration path. Use the full artifact whenever one of those conditions fails. Both paths run both analysis directions and the module-freeze gate.
+This reference is the Full-route analysis artifact. Run both analysis directions and the module-freeze gate only after `adaptive-evidence-first.md` selects Full. Direct records a receipt; Lite records a Lite card. Do not create modules or chunks before Full reconciliation passes.
 
 ## Evidence hygiene
 

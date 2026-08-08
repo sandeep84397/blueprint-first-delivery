@@ -15,6 +15,7 @@ METADATA_FILES = {"SKILL.md", "agents/openai.yaml"}
 ALLOWED_TOP_LEVEL = {"SKILL.md", "agents", "references", "scripts", "tests"}
 ROUTING_SCENARIO_FILE = "tests/model-routing-pressure-scenarios.md"
 OUTCOME_BACKWARD_SCENARIO_FILE = "tests/outcome-backward-pressure-scenarios.md"
+ADAPTIVE_EVIDENCE_SCENARIO_FILE = "tests/adaptive-evidence-pressure-scenarios.md"
 REQUIRED_FILES = (
     "SKILL.md",
     "agents/openai.yaml",
@@ -22,10 +23,13 @@ REQUIRED_FILES = (
     "references/model-routing.md",
     "references/outcome-backward-planning.md",
     "references/readiness-rubric.md",
+    "references/adaptive-evidence-first.md",
+    "references/evidence-manifest.md",
     "references/review-and-gate-checklists.md",
     "references/runtime-mappings/codex.md",
     "references/runtime-mappings/claude-code.md",
     "scripts/validate_skill.py",
+    "scripts/validate_evidence_manifest.py",
     "scripts/verify_global_boundary.py",
     "tests/pressure-scenarios.md",
     "tests/baseline-no-skill.md",
@@ -34,8 +38,13 @@ REQUIRED_FILES = (
     "tests/validate-skill.sh",
     "tests/test-validator-negative-fixtures.sh",
     "tests/test_validate_skill.py",
+    "tests/test_validate_evidence_manifest.py",
     ROUTING_SCENARIO_FILE,
     OUTCOME_BACKWARD_SCENARIO_FILE,
+    ADAPTIVE_EVIDENCE_SCENARIO_FILE,
+    "references/examples/direct-task-proven.json",
+    "references/examples/lite-task-proven-handoff.json",
+    "references/examples/full-plan-frozen.json",
 )
 RUNTIME_MAPPING_FILES = (
     "references/runtime-mappings/codex.md",
@@ -48,6 +57,8 @@ NEUTRAL_ROUTING_FILES = (
     "references/blueprint-templates.md",
     "references/readiness-rubric.md",
     "references/review-and-gate-checklists.md",
+    "references/adaptive-evidence-first.md",
+    "references/evidence-manifest.md",
 )
 MAPPING_TIERS = ("Light", "Standard", "Deep", "Maximum")
 MAPPING_EFFORTS = {
@@ -126,10 +137,22 @@ OUTCOME_BACKWARD_SCENARIO_ROWS = (
     ("OB07", "Proposed modules exist before reconciliation passes", "Modules provisional; no chunking or scoring"),
     ("OB08", "Outcome-backward gate passes with independent review", "Freeze modules; then chunk and route work"),
 )
+ADAPTIVE_EVIDENCE_SCENARIO_ROWS = (
+    ("AE01", "Exact one-owner reversible change with deterministic oracle and no handoff", "Direct"),
+    ("AE02", "Bounded implementation with one owner and no Full trigger", "Lite"),
+    ("AE03", "Unknown external API behavior or unresolved external dependency", "Full"),
+    ("AE04", "Persistence, migration, recovery, deletion, or integrity risk", "Full"),
+    ("AE05", "Two modules or state owners on one causal path", "Full"),
+    ("AE06", "Critical contract has prose but no named executable oracle", "Approval blocked"),
+    ("AE07", "Baseline contract, owned file, or evidence digest changes", "Evidence STALE; re-approval required"),
+    ("AE08", "Full work has Agent Brain summary without source references", "Gate blocked"),
+    ("AE09", "Integration is deferred until the final milestone", "Early vertical proof required"),
+    ("AE10", "Lite handoff lacks source-linked Agent Brain", "Gate blocked"),
+)
 OUTCOME_BACKWARD_WORKFLOW_REQUIREMENTS = (
-    ("SKILL.md", "1. Define the outcome contract", "missing outcome-contract stage"),
-    ("SKILL.md", "Backward and forward analysis must reconcile before modules are frozen.", "missing convergence-before-freeze gate"),
-    ("SKILL.md", "Outcome-backward gate =", "missing blocked outcome-backward field"),
+    ("SKILL.md", "**Full** — define the outcome contract", "missing outcome-contract stage"),
+    ("SKILL.md", "Run outcome-backward and forward reconciliation", "missing convergence-before-freeze gate"),
+    ("SKILL.md", "Architecture / plan:", "missing blocked outcome-backward field"),
     ("references/blueprint-templates.md", "## Outcome-Backward Plan", "missing outcome-backward template"),
     ("references/blueprint-templates.md", "### Reconciliation history", "missing reconciliation-history template"),
     ("references/review-and-gate-checklists.md", "## Outcome-backward planning gate", "missing outcome-backward review gate"),
@@ -137,6 +160,25 @@ OUTCOME_BACKWARD_WORKFLOW_REQUIREMENTS = (
     ("references/review-and-gate-checklists.md", "No third analysis pass", "missing repeated-trigger block"),
     ("references/readiness-rubric.md", "Outcome-backward planning is a separate pre-score gate.", "missing separate pre-score gate"),
     ("references/readiness-rubric.md", "If it is not `PASS`, readiness is **unscorable**.", "missing unscorable outcome-backward rule"),
+)
+ADAPTIVE_EVIDENCE_REQUIREMENTS = (
+    ("SKILL.md", "Route before choosing blueprint depth.", "missing adaptive route gate"),
+    ("SKILL.md", "Direct requires every Direct predicate", "missing Direct all-predicates gate"),
+    ("SKILL.md", "Full is mandatory", "missing Full hard-trigger gate"),
+    ("SKILL.md", "Executable proof is required", "missing executable-proof gate"),
+    ("SKILL.md", "Use source-linked Agent Brain for a handoff", "missing Lite source-linked Agent Brain gate"),
+    ("SKILL.md", "Full work requires source-linked Agent Brain.", "missing Full source-linked Agent Brain gate"),
+    ("references/adaptive-evidence-first.md", "## Deterministic route", "missing deterministic route contract"),
+    ("references/adaptive-evidence-first.md", "### Direct: every predicate must pass", "missing Direct predicate contract"),
+    ("references/adaptive-evidence-first.md", "### Full: any hard trigger is sufficient", "missing Full trigger contract"),
+    ("references/adaptive-evidence-first.md", "Outcome-backward and forward reconciliation runs only for Full.", "missing Full-only reconciliation rule"),
+    ("references/adaptive-evidence-first.md", "## Approval states", "missing distinct approval states"),
+    ("references/adaptive-evidence-first.md", "early vertical proof", "missing early integration proof"),
+    ("references/evidence-manifest.md", "## Proof matrix", "missing proof matrix contract"),
+    ("references/evidence-manifest.md", "`ASSUMPTION`, `BLOCKED`, or `STALE`", "missing critical proof state veto"),
+    ("references/evidence-manifest.md", "## Immutable baseline and drift", "missing immutable baseline contract"),
+    ("references/evidence-manifest.md", "mark affected evidence `STALE`", "missing drift invalidation contract"),
+    ("references/evidence-manifest.md", "## Agent Brain continuity", "missing Agent Brain continuity contract"),
 )
 OUTCOME_BACKWARD_REFERENCE_REQUIREMENTS = (
     ("references/outcome-backward-planning.md", "## Outcome contract", "missing observable-outcome contract"),
@@ -499,6 +541,22 @@ def _validate_outcome_backward_scenarios(text: str) -> None:
         )
 
 
+def _validate_adaptive_evidence_scenarios(text: str) -> None:
+    for scenario_id, pressure_case, expected_result in ADAPTIVE_EVIDENCE_SCENARIO_ROWS:
+        row = f"| {scenario_id} | {pressure_case} | {expected_result} |"
+        _require(
+            text,
+            row,
+            ADAPTIVE_EVIDENCE_SCENARIO_FILE,
+            f"adaptive-evidence pressure scenario mismatch: {scenario_id}",
+        )
+
+
+def _validate_adaptive_evidence_contract(files: dict[str, str]) -> None:
+    for relative, value, reason in ADAPTIVE_EVIDENCE_REQUIREMENTS:
+        _require(files[relative], value, relative, reason)
+
+
 def _validate_outcome_backward_reference(files: dict[str, str]) -> None:
     for relative, required, reason in OUTCOME_BACKWARD_REFERENCE_REQUIREMENTS:
         _require(files[relative], required, relative, reason)
@@ -562,30 +620,20 @@ def _validate_workflow_contract(files: dict[str, str]) -> None:
         ("SKILL.md", "literal status `greenfield`", "missing literal greenfield evidence rule"),
         ("SKILL.md", "principal-engineer-style adversarial review", "missing independent adversarial review"),
         ("SKILL.md", "Reviewer must not author", "missing author-reviewer separation"),
-        ("SKILL.md", "Before each chunk, satisfy its chunk gate", "missing per-chunk gate requirement"),
-        ("SKILL.md", "execute the separate integration blueprint", "missing separate integration workflow"),
+        ("SKILL.md", "Before each chunk, satisfy its gate", "missing per-chunk gate requirement"),
+        ("SKILL.md", "early vertical proof follows the first compatible", "missing separate integration workflow"),
         ("SKILL.md", "Unit tests alone never satisfy integration", "missing unit-test-only integration veto"),
-        ("SKILL.md", "Publish a traceability report", "missing final traceability requirement"),
+        ("SKILL.md", "Publish traceability:", "missing final traceability requirement"),
         ("SKILL.md", "Pressure rules:", "missing pressure-resistance rules"),
         ("SKILL.md", "## Blocked gate report", "missing blocked gate report"),
         ("SKILL.md", "Status / pre-code block:", "missing blocked status field"),
-        ("SKILL.md", "Architecture evidence:", "missing blocked architecture-evidence field"),
-        ("SKILL.md", "Independent review:", "missing blocked independent-review field"),
-        ("SKILL.md", "principal-engineer-style reviewer =", "missing blocked principal-reviewer subfield"),
-        ("SKILL.md", "distinct from author =", "missing blocked reviewer-separation subfield"),
-        ("SKILL.md", "Readiness / veto:", "missing blocked readiness field"),
-        ("SKILL.md", "overall score =", "missing blocked overall-score subfield"),
-        ("SKILL.md", "every chunk score =", "missing blocked per-chunk-score subfield"),
-        ("SKILL.md", "threshold for both = >=95/100", "missing blocked readiness-threshold subfield"),
+        ("SKILL.md", "Route / trigger:", "missing blocked route field"),
+        ("SKILL.md", "Architecture / plan:", "missing blocked architecture-evidence field"),
+        ("SKILL.md", "Proof / baseline:", "missing blocked proof field"),
         ("SKILL.md", "Ownership / ordering:", "missing blocked ownership field"),
-        ("SKILL.md", "Chunk gates:", "missing blocked chunk-gate field"),
-        ("SKILL.md", "start gate =", "missing blocked start-gate subfield"),
-        ("SKILL.md", "completion gate =", "missing blocked completion-gate subfield"),
-        ("SKILL.md", "Integration gate:", "missing blocked integration-gate field"),
-        ("SKILL.md", "separate blueprint =", "missing blocked integration-blueprint subfield"),
-        ("SKILL.md", "separate gate =", "missing blocked separate-gate subfield"),
+        ("SKILL.md", "Chunk / integration gates:", "missing blocked chunk-gate field"),
         ("SKILL.md", "Traceability:", "missing blocked traceability field"),
-        ("SKILL.md", "optional Agent Brain", "missing optional Agent Brain boundary"),
+        ("SKILL.md", "Agent Brain summaries are continuity aids", "missing Agent Brain boundary"),
         ("SKILL.md", "cheapest capable tier", "missing cheapest-capable routing rule"),
         ("SKILL.md", "Load only the active runtime mapping", "missing active-runtime-only rule"),
         ("SKILL.md", "below-floor override", "missing below-floor override gate"),
@@ -646,18 +694,20 @@ def validate(root_argument: str) -> None:
     _validate_model_routing(files)
     _validate_routing_scenarios(files[ROUTING_SCENARIO_FILE])
     _validate_outcome_backward_scenarios(files[OUTCOME_BACKWARD_SCENARIO_FILE])
+    _validate_adaptive_evidence_scenarios(files[ADAPTIVE_EVIDENCE_SCENARIO_FILE])
+    _validate_adaptive_evidence_contract(files)
     _validate_outcome_backward_reference(files)
 
     skill = files["SKILL.md"]
     templates = files["references/blueprint-templates.md"]
     checklist = files["references/review-and-gate-checklists.md"]
     rubric = files["references/readiness-rubric.md"]
-    _require(skill, "2. Explore the existing architecture", "SKILL.md", "missing architecture exploration requirement")
+    _require(skill, "4. Explore existing architecture", "SKILL.md", "missing architecture exploration requirement")
     _require(skill, "Record architecture evidence", "SKILL.md", "missing architecture evidence requirement")
     _require(skill, "smallest single-responsibility chunk", "SKILL.md", "missing smallest-chunk requirement")
-    _require(skill, ">= 95/100 readiness", "SKILL.md", "missing per-chunk readiness threshold")
+    _require(skill, "`>=95/100` score", "SKILL.md", "missing per-chunk readiness threshold")
     _require(skill, "not a mathematical probability of correctness or reliability", "SKILL.md", "missing readiness limitation")
-    _require(skill, "Incrementally integrate", "SKILL.md", "missing incremental integration requirement")
+    _require(skill, "early vertical proof", "SKILL.md", "missing incremental integration requirement")
     _require(templates, "### Current architecture evidence", "references/blueprint-templates.md", "missing architecture evidence template")
     _require(checklist, "Architecture evidence is recorded", "references/review-and-gate-checklists.md", "missing architecture review gate")
     _validate_rubric(rubric)
