@@ -4,11 +4,11 @@
 
 ## What this project does
 
-Blueprint-First Delivery is a reusable workflow skill for Codex and Claude Code. It defines an observable outcome and evidence, reasons backward to prerequisites, checks forward feasibility against architecture, reconciles both views, then freezes modules before coding. It obtains independent architecture review, splits delivery into the smallest practical verifiable chunks, routes each chunk to the cheapest capable model, and validates integration against the original requirement.
+Blueprint-First Delivery is a reusable workflow skill for Codex and Claude Code. It first selects the smallest safe process: **Direct** for a truly local reversible change, **Lite** for bounded work, or **Full** for cross-boundary/risky work. Full work defines an observable outcome and evidence, reasons backward to prerequisites, checks forward feasibility against architecture, then freezes a reviewed plan before code.
 
 It is designed for features, refactors, migrations, and other multi-part changes where one large implementation pass would carry too much ambiguity and rework risk.
 
-This repository is the single source of truth for the shared workflow, routing policy, runtime mappings, templates, gates, and tests.
+This repository is the single source of truth for shared workflow, runtime mappings, templates, executable evidence rules, gates, and tests.
 
 ## The problem
 
@@ -22,13 +22,23 @@ A large task may be only partly understood even when each local edit looks plaus
 
 Individually passing components can still fail when their contracts, state ownership, or integration order disagree. Self-reported “95% confidence” is not objective evidence.
 
+## Adaptive process depth
+
+| Route | Use when | Required evidence |
+| --- | --- | --- |
+| Direct | One owner, bounded reversible scope, deterministic oracle, no handoff, and no protected risk | Direct receipt |
+| Lite | Bounded work without a Full trigger | Lite card and oracle; Agent Brain only for handoff/multi-turn work |
+| Full | Any contract, persistence, concurrency, lifecycle, security, external-uncertainty, or cross-module trigger | Reviewed blueprint, proof matrix, immutable baseline, early integration, traceability |
+
+This avoids spending Full-route tokens on a simple mechanical change, while preventing a risky change from being down-routed because it looks small.
+
 ## Outcome-backward planning
 
-Outcome-backward planning starts with observable acceptance evidence, then works backward through the conditions required to produce it while checking that those conditions are feasible in the current architecture. It surfaces late constraints earlier; it does not predict every future issue. Dates are constraints, not outcomes. When ambiguity would change behavior, the workflow asks users to resolve it before modules are frozen; until then, modules stay provisional. No implementation may begin before module freeze. Model routing occurs only after module freeze.
+For **Full** work, outcome-backward planning starts with observable acceptance evidence, then works backward through the conditions required to produce it while checking that those conditions are feasible in the current architecture. It surfaces late constraints earlier; it does not predict every future issue. Dates are constraints, not outcomes. When ambiguity would change behavior, the workflow asks users to resolve it before modules are frozen; until then, modules stay provisional.
 
 ## How Blueprint-First Delivery solves it
 
-The workflow enforces ten stages:
+Full work enforces these stages:
 
 1. Outcome contract.
 2. Architecture evidence.
@@ -37,9 +47,9 @@ The workflow enforces ten stages:
 5. Reconciliation loop.
 6. Module-freeze gate.
 7. Chunk decomposition.
-8. Readiness scoring and model routing.
-9. Implementation and incremental integration.
-10. Outcome and requirement verification.
+8. Proof matrix, baseline, readiness scoring, and model routing.
+9. Task proof and early vertical integration.
+10. Final integration and outcome verification.
 
 ```text
 Observable outcome and acceptance evidence
@@ -47,7 +57,7 @@ Observable outcome and acceptance evidence
   → Backward prerequisites
   → Forward feasibility
   → Reconciliation and module freeze
-  → Small evidence-ready chunks
+  → Small evidence-ready chunks with executable oracles
   → Cheapest capable model per chunk
   → Incremental integration
   → Outcome traceability
@@ -55,24 +65,15 @@ Observable outcome and acceptance evidence
 
 ## Evidence, not confidence
 
-`>=95/100` measures collected readiness evidence. It is not a mathematical probability and does not guarantee defect-free software. The score records evidence for clarity, contracts, dependencies, testability, edge cases, independent review, and integration readiness. `BLOCKED` means readiness is unscorable, not a lower numeric score. A failed module-freeze gate leaves readiness unscorable.
+`>=95/100` measures collected readiness evidence. It is not a mathematical probability and does not guarantee defect-free software. The score records evidence for clarity, contracts, dependencies, testability, edge cases, independent review, and integration readiness. It cannot compensate for a missing executable oracle, critical assumption, baseline drift, or blocked gate. `BLOCKED` means readiness is unscorable, not a lower numeric score.
 
 ## What you get
 
-- Module blueprint.
-- Outcome-Backward Plan.
-- Blocker register.
-- Reconciliation history.
-- Module-freeze decision.
-- Residual-risk record.
-- Dependency graph.
-- Chunk blueprints.
-- Readiness scores and vetoes.
-- Route manifest and history.
-- Independent review record.
-- Chunk evidence.
-- Integration evidence.
-- Final traceability report.
+- Direct receipt or Lite card for low-risk work.
+- Full outcome-backward plan, blocker register, and reconciliation history when risk requires it.
+- Route manifest, proof matrix, immutable baseline, and readiness vetoes.
+- Independent review record and explicit architecture/plan/task/integration states.
+- Early vertical proof, final integration evidence, and requirement traceability.
 
 ## Example: Offline profile editing
 
@@ -136,6 +137,7 @@ Trigger the skill by naming it, for example:
 ```text
 Use $blueprint-first-delivery to plan this feature.
 Use $blueprint-first-delivery to assess readiness before implementation.
+Use $blueprint-first-delivery to route this change adaptively before coding.
 ```
 
 Provide the observable outcome, objective acceptance evidence, constraints, known dependencies, and delivery deadline. The deadline is a constraint; it is not the outcome.
@@ -145,10 +147,14 @@ Provide the observable outcome, objective acceptance evidence, constraints, know
 ```text
 skills/blueprint-first-delivery/
   SKILL.md                 # Skill instructions
-  references/              # Templates, rubric, and checklists
+  references/              # Policy, templates, rubric, manifests, and checklists
+  references/adaptive-evidence-first.md # Direct/Lite/Full route policy
+  references/evidence-manifest.md # Proof, traceability, baseline rules
   references/outcome-backward-planning.md # Outcome-first planning guidance
   scripts/validate_skill.py # Dependency-free package validator
+  scripts/validate_evidence_manifest.py # Route-manifest validator
   tests/validate-skill.sh  # Package validation
+  tests/adaptive-evidence-pressure-scenarios.md # Adaptive safety scenarios
   tests/outcome-backward-pressure-scenarios.md # Planning pressure scenarios
 ```
 
@@ -158,9 +164,11 @@ From the repository root, run:
 
 ```sh
 sh skills/blueprint-first-delivery/tests/validate-skill.sh
+python3 skills/blueprint-first-delivery/scripts/validate_evidence_manifest.py \
+  skills/blueprint-first-delivery/references/examples/full-plan-frozen.json
 ```
 
-The repository validator requires CPython 3.9+ and POSIX `sh`. The core package-profile validator uses only the Python standard library and is not a general YAML parser.
+The validators require CPython 3.9+ and POSIX `sh`. They use only the Python standard library and the package validator is not a general YAML parser.
 
 ## Limitations
 
